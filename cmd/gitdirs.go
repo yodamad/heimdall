@@ -4,39 +4,57 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"heimdall/utils"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
 const DEFAULT_FOLDER = "/Users/admin_local/work"
 const MAX_DEPTH = 3
 
+var RootDir string
+var Verbose bool
+
 var rootCmd = &cobra.Command{
-	Use:   "hugo",
-	Short: "Hugo is a very fast static site generator",
-	Long: `A Fast and Flexible Static Site Generator built with
-                love by spf13 and friends in Go.
-                Complete documentation is available at http://hugo.spf13.com`,
+	Use:   "heimdall",
+	Short: "Heimdall helps you with your git folders",
+	Long: `Heimdall is a CLI tool to help you with your git folders.
+			You can check, update, ... everything easily
+          `,
+	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		println("Echo")
 	},
 }
 
 var gitInfo = &cobra.Command{
 	Use:   "git-info",
-	Short: "Hugo is a very fast static site generator",
-	Long: `A Fast and Flexible Static Site Generator built with
-                love by spf13 and friends in Go.
-                Complete documentation is available at http://hugo.spf13.com`,
+	Short: "List all directories containing a `.git` folder",
 	Run: func(cmd *cobra.Command, args []string) {
+		if Verbose {
+			log.SetLevel(log.DebugLevel)
+		}
 		listGitDirs()
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(gitInfo)
+	rootCmd.PersistentFlags().StringVarP(&RootDir, "root-dir", "r", DEFAULT_FOLDER, "root directory")
+	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
+
+	log.SetFormatter(&log.TextFormatter{
+		DisableLevelTruncation: true,
+	})
+	// Output to stdout instead of the default stderr
+	// Can be any io.Writer, see below for File example
+	f, _ := os.OpenFile("heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	log.SetOutput(f)
+
+	// Only log the warning severity or above.
+	log.SetLevel(log.InfoLevel)
 }
 
 func Execute() {
@@ -47,9 +65,11 @@ func Execute() {
 }
 
 func listGitDirs() {
+	rootDir := RootDir
+	utils.Trace("Searching in "+rootDir+"...", false)
 	maxDepth := 2
-	rootDir := DEFAULT_FOLDER
 	nbIgnoreSlashes := strings.Count(rootDir, "/")
+	nbGitFolders := 0
 
 	filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -57,17 +77,19 @@ func listGitDirs() {
 			return err
 		}
 		if d.IsDir() && (strings.Count(path, string(os.PathSeparator))-nbIgnoreSlashes) > maxDepth {
-			log.WithField("dir", path).Debug("Skip a dir")
+			utils.Trace("Skip "+path, true)
 			return fs.SkipDir
 		} else if d.IsDir() {
-			log.WithField("dir", path).Info("Inspecting dir")
+			utils.Trace("Inspecting "+path, true)
 			_, err := os.Stat(path + "/.git")
 			if err == nil {
-				log.WithField("dir", path).Info(" ✅ Found .git")
+				utils.Trace("Found a .git folder : "+path, true)
+				nbGitFolders++
 				return fs.SkipDir
 			}
 		}
 		// ... process entry
 		return nil
 	})
+	utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folders", false)
 }
