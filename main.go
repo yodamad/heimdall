@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"heimdall/cmd"
@@ -11,14 +12,15 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "heimdall",
-	Short: "Heimdall helps you with your git folders",
-	Long: `
-Heimdall is a CLI tool to help you with your git folders.
+	Short: colorstring.Color("[yellow]Heimdall[default] helps you with your git folders"),
+	Long: colorstring.Color(`
+[yellow]Heimdall[default] is a CLI tool to help you with your git folders.
 You can check, update, ... everything easily
-          `,
+          `),
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 	},
+	Example: colorstring.Color("[light_blue]heimdall -h"),
 }
 
 func init() {
