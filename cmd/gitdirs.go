@@ -3,11 +3,14 @@ package cmd
 import (
 	"fmt"
 	"github.com/go-git/go-git/v5"
+	"github.com/jedib0t/go-pretty/v6/table"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"heimdall/cmd/entity"
 	"heimdall/utils"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -15,6 +18,8 @@ import (
 
 const DEFAULT_FOLDER = "/Users/admin_local/work"
 const MAX_DEPTH = 3
+
+var gitFolders = []entity.GitFolder{}
 
 var RootDir string
 var Verbose bool
@@ -95,6 +100,17 @@ func listGitDirs() {
 	}
 
 	utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folders", false)
+
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Path", "Branch", "IsDirty", "RemoteChanges"})
+	for _, gf := range gitFolders {
+		t.AppendRows([]table.Row{
+			{gf.Path, gf.CurrentBranch, gf.HasLocalChanges, gf.RemoteChanges},
+		})
+		t.AppendSeparator()
+	}
+	t.Render()
 }
 
 func checkIsGitDir(path string) (bool, error) {
@@ -119,8 +135,20 @@ func checkIfUpToDate(path string) (git.Status, error) {
 	repo.Fetch(&git.FetchOptions{})
 	w, err := repo.Worktree()
 	s, err := w.Status()
+	ref, _ := repo.Head()
 
-	utils.Trace(path+" is up-to-date ? "+strconv.FormatBool(s.IsClean()), true)
+	utils.Trace("Check "+path, true)
+	utils.Trace("Is up-to-date ? "+s.String(), true)
+	utils.Trace("Exec : git rev-list --count "+ref.Name().Short()+"..origin/"+ref.Name().Short(), true)
+
+	out, err := exec.Command("git", "-C", path, "rev-list", "--count", ref.Name().Short()+"..origin/"+ref.Name().Short()).Output()
+	gitFolders = append(gitFolders, entity.GitFolder{
+		Path:                 path,
+		CurrentBranch:        ref.Name().Short(),
+		HasLocalChanges:      s.IsClean(),
+		DetailedLocalChanges: s.String(),
+		RemoteChanges:        string(out),
+	})
 
 	return s, err
 }
