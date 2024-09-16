@@ -19,8 +19,9 @@ import (
 var gitFolders = []entity.GitFolder{}
 
 var GitInfo = &cobra.Command{
-	Use:   "git-info",
-	Short: "List all directories containing a `.git` folder",
+	Use:     "git-info",
+	Aliases: []string{"gi"},
+	Short:   "List all directories containing a `.git` folder",
 	Run: func(cmd *cobra.Command, args []string) {
 		if commons.Verbose {
 			log.SetLevel(log.DebugLevel)
