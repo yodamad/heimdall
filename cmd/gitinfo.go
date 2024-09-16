@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/go-git/go-git/v5"
 	"github.com/jedib0t/go-pretty/v6/table"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"heimdall/cmd/entity"
+	"heimdall/commons"
 	"heimdall/utils"
 	"io/fs"
 	"os"
@@ -16,62 +16,21 @@ import (
 	"strings"
 )
 
-const DEFAULT_FOLDER = "/Users/admin_local/work"
-const MAX_DEPTH = 3
-
 var gitFolders = []entity.GitFolder{}
 
-var RootDir string
-var Verbose bool
-
-var rootCmd = &cobra.Command{
-	Use:   "heimdall",
-	Short: "Heimdall helps you with your git folders",
-	Long: `Heimdall is a CLI tool to help you with your git folders.
-			You can check, update, ... everything easily
-          `,
-	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-	},
-}
-
-var gitInfo = &cobra.Command{
+var GitInfo = &cobra.Command{
 	Use:   "git-info",
 	Short: "List all directories containing a `.git` folder",
 	Run: func(cmd *cobra.Command, args []string) {
-		if Verbose {
+		if commons.Verbose {
 			log.SetLevel(log.DebugLevel)
 		}
 		listGitDirs()
 	},
 }
 
-func init() {
-	rootCmd.AddCommand(gitInfo)
-	rootCmd.PersistentFlags().StringVarP(&RootDir, "root-dir", "r", DEFAULT_FOLDER, "root directory")
-	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
-
-	log.SetFormatter(&log.TextFormatter{
-		DisableLevelTruncation: true,
-	})
-	// Output to stdout instead of the default stderr
-	// Can be any io.Writer, see below for File example
-	f, _ := os.OpenFile("heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	log.SetOutput(f)
-
-	// Only log the warning severity or above.
-	log.SetLevel(log.InfoLevel)
-}
-
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-}
-
 func listGitDirs() {
-	rootDir := RootDir
+	rootDir := commons.RootDir
 	utils.Trace("Searching in "+rootDir+"...", false)
 	maxDepth := 2
 	nbIgnoreSlashes := strings.Count(rootDir, "/")
