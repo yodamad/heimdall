@@ -4,6 +4,8 @@ go 1.23.0
 
 require (
 	github.com/go-git/go-git/v5 v5.12.0
+	github.com/jedib0t/go-pretty/v6 v6.5.9
+	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
 )
@@ -20,10 +22,8 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
-	github.com/jedib0t/go-pretty/v6 v6.5.9 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
-	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
