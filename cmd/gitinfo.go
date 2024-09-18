@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/go-git/go-git/v5"
-	"github.com/jedib0t/go-pretty/v6/table"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"heimdall/cmd/entity"
@@ -61,16 +60,7 @@ func listGitDirs() {
 
 	utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folders", false)
 
-	t := table.NewWriter()
-	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Path", "Branch", "IsDirty", "RemoteChanges"})
-	for _, gf := range gitFolders {
-		t.AppendRows([]table.Row{
-			{gf.Path, gf.CurrentBranch, gf.HasLocalChanges, gf.RemoteChanges},
-		})
-		t.AppendSeparator()
-	}
-	t.Render()
+	utils.PrintTable(gitFolders)
 }
 
 func checkIsGitDir(path string) (bool, error) {
@@ -79,7 +69,7 @@ func checkIsGitDir(path string) (bool, error) {
 	if err == nil {
 		utils.Trace("Found a .git folder : "+path, true)
 
-		checkIfUpToDate(path)
+		_, err = checkIfUpToDate(path)
 
 		if err != nil {
 			return false, err
