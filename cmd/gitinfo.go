@@ -87,7 +87,7 @@ func checkIfUpToDate(path string) (git.Status, error) {
 		return nil, err
 	} else {
 		err := repo.Fetch(&git.FetchOptions{})
-		if err != nil {
+		if err != nil && err.Error() != "already up-to-date" {
 			utils.TraceWarn("Cannot fetch " + path + ". Skip it... (" + err.Error() + ")")
 			return nil, err
 		} else {

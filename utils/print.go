@@ -2,8 +2,10 @@ package utils
 
 import (
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"heimdall/cmd/entity"
 	"os"
+	"strings"
 )
 
 func PrintTable(gitFolders []entity.GitFolder) {
@@ -16,6 +18,16 @@ func PrintTable(gitFolders []entity.GitFolder) {
 		})
 		t.AppendSeparator()
 	}
+	t.SetColumnConfigs([]table.ColumnConfig{
+		{
+			Name:  "IsDirty",
+			Align: text.AlignCenter,
+		},
+		{
+			Name:  "RemoteChanges",
+			Align: text.AlignCenter,
+		},
+	})
 	t.Render()
 }
 
@@ -28,8 +40,9 @@ func visualDisplayBool(status bool) string {
 }
 
 func displayRemoteChanges(remoteChanges string) string {
-	if len(remoteChanges) > 0 {
-		return visualDisplayBool(true) + "(" + remoteChanges + ")"
+	changes := strings.TrimSuffix(remoteChanges, "\n")
+	if len(changes) > 0 && changes != "0" {
+		return visualDisplayBool(true) + "(" + changes + ")"
 	} else {
 		return visualDisplayBool(false)
 	}
