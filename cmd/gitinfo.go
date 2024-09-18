@@ -82,23 +82,33 @@ func checkIsGitDir(path string) (bool, error) {
 
 func checkIfUpToDate(path string) (git.Status, error) {
 	repo, err := git.PlainOpen(path)
-	repo.Fetch(&git.FetchOptions{})
-	w, err := repo.Worktree()
-	s, err := w.Status()
-	ref, _ := repo.Head()
+	if err != nil {
+		utils.TraceWarn("Cannot check " + path + ". Skip it... (" + err.Error() + ")")
+		return nil, err
+	} else {
+		err := repo.Fetch(&git.FetchOptions{})
+		if err != nil {
+			utils.TraceWarn("Cannot fetch " + path + ". Skip it... (" + err.Error() + ")")
+			return nil, err
+		} else {
+			w, err := repo.Worktree()
+			s, err := w.Status()
+			ref, _ := repo.Head()
 
-	utils.Trace("Check "+path, true)
-	utils.Trace("Is up-to-date ? "+s.String(), true)
-	utils.Trace("Exec : git rev-list --count "+ref.Name().Short()+"..origin/"+ref.Name().Short(), true)
+			utils.Trace("Check "+path, true)
+			utils.Trace("Is up-to-date ? "+s.String(), true)
+			utils.Trace("Exec : git rev-list --count "+ref.Name().Short()+"..origin/"+ref.Name().Short(), true)
 
-	out, err := exec.Command("git", "-C", path, "rev-list", "--count", ref.Name().Short()+"..origin/"+ref.Name().Short()).Output()
-	gitFolders = append(gitFolders, entity.GitFolder{
-		Path:                 path,
-		CurrentBranch:        ref.Name().Short(),
-		HasLocalChanges:      s.IsClean(),
-		DetailedLocalChanges: s.String(),
-		RemoteChanges:        string(out),
-	})
+			out, err := exec.Command("git", "-C", path, "rev-list", "--count", ref.Name().Short()+"..origin/"+ref.Name().Short()).Output()
+			gitFolders = append(gitFolders, entity.GitFolder{
+				Path:                 path,
+				CurrentBranch:        ref.Name().Short(),
+				HasLocalChanges:      s.IsClean(),
+				DetailedLocalChanges: s.String(),
+				RemoteChanges:        string(out),
+			})
 
-	return s, err
+			return s, err
+		}
+	}
 }

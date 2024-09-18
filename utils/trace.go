@@ -10,3 +10,8 @@ func Trace(msg string, isDebug bool) {
 		log.Info(msg)
 	}
 }
+
+func TraceWarn(msg string) {
+	println(msg)
+	log.Warn(msg)
+}
