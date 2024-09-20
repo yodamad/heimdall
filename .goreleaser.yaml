@@ -1,4 +1,4 @@
-version: 1
+version: 2
 
 before:
   hooks:
@@ -42,6 +42,13 @@ release:
   github:
     owner: yodamad
     name: heimdall
-  draft: true
+  draft: false
+  prerelease: auto
+  make_latest: true
   replace_existing_draft: true
-
+  name_template: 'Release v{{ .Tag }}'
+  header: |
+    ## 🎉 Release v{{ .Tag}} ({{ .Date }})
+  footer: |
+    ## Enjoy 🍹
+    Copyright @yodamad
