@@ -46,9 +46,9 @@ release:
   prerelease: auto
   make_latest: true
   replace_existing_draft: true
-  name_template: 'Release v{{ .Tag }}'
+  name_template: 'v{{ .Tag }}'
   header: |
-    ## 🎉 Release v{{ .Tag}} ({{ .Date }})
+
   footer: |
     ## Enjoy 🍹
-    Copyright @yodamad
+    📆 {{ .Now.Format "2006-01-02" }} - Copyright @yodamad
