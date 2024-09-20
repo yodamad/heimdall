@@ -11,7 +11,7 @@ import (
 func PrintTable(gitFolders []entity.GitFolder) {
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Path", "Branch", "IsDirty", "RemoteChanges"})
+	t.AppendHeader(table.Row{"Path", "Branch", "Local_Changes", "Remote_Changes"})
 	for _, gf := range gitFolders {
 		t.AppendRows([]table.Row{
 			{gf.Path, gf.CurrentBranch, visualDisplayBool(gf.HasLocalChanges), displayRemoteChanges(gf.RemoteChanges)},
@@ -20,11 +20,15 @@ func PrintTable(gitFolders []entity.GitFolder) {
 	}
 	t.SetColumnConfigs([]table.ColumnConfig{
 		{
-			Name:  "IsDirty",
+			Name:  "Branch",
 			Align: text.AlignCenter,
 		},
 		{
-			Name:  "RemoteChanges",
+			Name:  "Local_Changes",
+			Align: text.AlignCenter,
+		},
+		{
+			Name:  "Remote_Changes",
 			Align: text.AlignCenter,
 		},
 	})
