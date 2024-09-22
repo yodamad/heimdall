@@ -4,6 +4,8 @@ A CLI to help with your git directories (for now 😉).
 
 Based on the myth of the Nordic God, [Heimdall](https://en.wikipedia.org/wiki/Heimdall), the CLI is here to ease with your multiple Git repositories.
 
+![Simple demo](./assets/render1727025902129.gif)
+
 ## How to install
 
 __*On MacOS:*__
