@@ -52,3 +52,21 @@ release:
   footer: |
     ## Enjoy 🍹
     📆 {{ .Now.Format "2006-01-02" }} - Copyright @yodamad
+
+brews:
+  - name: heimdall
+    homepage: https://github.com/yodamad/heimdall
+    commit_author:
+      name: yodamad
+      email: mvincent.it@gmail.com
+    license: MIT
+    url_template: "https://github.com/yodamad/heimdall/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    dependencies:
+      - name: git
+      - name: zsh
+        type: optional
+    repository:
+      owner: yodamad
+      name: homebrew-tools
+      branch: main
+
