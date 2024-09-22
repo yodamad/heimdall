@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/go-git/go-git/v5"
+	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"heimdall/cmd/entity"
@@ -31,7 +32,7 @@ var GitInfo = &cobra.Command{
 
 func listGitDirs() {
 	rootDir := commons.RootDir
-	utils.Trace("Searching in "+rootDir+"...", false)
+	utils.Trace(colorstring.Color("Searching in [light_blue]'"+rootDir+"'[default] ..."), false)
 	maxDepth := 2
 	nbIgnoreSlashes := strings.Count(rootDir, "/")
 	nbGitFolders := 0
