@@ -1,12 +1,38 @@
 package utils
 
 import (
+	"fmt"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/mitchellh/colorstring"
 	"heimdall/cmd/entity"
+	"heimdall/commons"
 	"os"
 	"strings"
 )
+
+// ldflags vars
+var (
+	Version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
+func PrintBanner() {
+	fmt.Println("            _               _       _ _")
+	fmt.Println("  /\\  /\\___(_)_ __ ___   __| | __ _| | |")
+	fmt.Println(" / /_/ / _ \\ | '_ ` _ \\ / _` |/ _` | | |")
+	fmt.Println("/ __  /  __/ | | | | | | (_| | (_| | | |")
+	fmt.Println("\\/ /_/ \\___|_|_| |_| |_|\\__,_|\\__,_|_|_|")
+	fmt.Println("  ")
+	if commons.Verbose {
+		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset] (commit %s), built at %s\n"), Version, commit, date)
+	} else {
+		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset]\n"), Version)
+	}
+
+	fmt.Println("  ")
+}
 
 func PrintTable(gitFolders []entity.GitFolder) {
 	t := table.NewWriter()
