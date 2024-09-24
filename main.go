@@ -49,5 +49,11 @@ func Execute() {
 }
 
 func main() {
+	fmt.Println("            _               _       _ _")
+	fmt.Println("  /\\  /\\___(_)_ __ ___   __| | __ _| | |")
+	fmt.Println(" / /_/ / _ \\ | '_ ` _ \\ / _` |/ _` | | |")
+	fmt.Println("/ __  /  __/ | | | | | | (_| | (_| | | |")
+	fmt.Println("\\/ /_/ \\___|_|_| |_| |_|\\__,_|\\__,_|_|_|")
+	fmt.Println("                                        ")
 	Execute()
 }
