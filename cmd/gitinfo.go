@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/go-git/go-git/v5"
 	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
@@ -32,8 +33,27 @@ var GitInfo = &cobra.Command{
 
 func listGitDirs() {
 	rootDir := commons.RootDir
+	interactiveMode := commons.Interactive
+	answer := "n"
+
+	for interactiveMode && !strings.EqualFold(answer, "y") {
+		answer = commons.AskQuestion(colorstring.Color("🔍 Search in directory [light_blue]" + rootDir + "[default] [light_gray][Y/n][default] : "))
+		if strings.EqualFold(answer, "n") {
+			if strings.EqualFold(answer, "n") {
+				answer = commons.AskQuestion(colorstring.Color("➡️ Directory to search in : "))
+			}
+			rootDir = answer
+		} else if answer == "" {
+			answer = "y"
+		} else if !strings.EqualFold(answer, "y") {
+			fmt.Println(colorstring.Color("[yellow]Unknown option value : [light_gray]" + answer))
+			// Reset answer
+			answer = "n"
+		}
+	}
+
 	utils.Trace(colorstring.Color("Searching in [light_blue]'"+rootDir+"'[default] ..."), false)
-	maxDepth := 2
+	maxDepth := commons.MAX_DEPTH
 	nbIgnoreSlashes := strings.Count(rootDir, "/")
 	nbGitFolders := 0
 
@@ -57,6 +77,8 @@ func listGitDirs() {
 			// ... process entry
 			return nil
 		})
+	} else {
+		nbGitFolders++
 	}
 
 	utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folders", false)

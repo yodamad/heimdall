@@ -1,5 +1,9 @@
 package commons
 
+// EOL /* End Of Line */
+const EOL = "\n"
+const EOL_BYTE = '\n'
+
 // DEFAULT_FOLDER /* Default folder for git-info search */
 const DEFAULT_FOLDER = "."
 

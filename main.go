@@ -27,6 +27,7 @@ func init() {
 	rootCmd.AddCommand(cmd.GitInfo)
 	rootCmd.PersistentFlags().StringVarP(&commons.RootDir, "root-dir", "r", commons.DEFAULT_FOLDER, "root directory")
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
+	rootCmd.PersistentFlags().BoolVarP(&commons.Interactive, "i", "i", false, "interactive mode")
 
 	log.SetFormatter(&log.TextFormatter{
 		DisableLevelTruncation: true,
