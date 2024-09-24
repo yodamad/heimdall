@@ -52,7 +52,12 @@ func listGitDirs() {
 		}
 	}
 
-	utils.Trace(colorstring.Color("Searching in [light_blue]'"+rootDir+"'[default] ..."), false)
+	if rootDir == commons.RootDir {
+		utils.Trace(colorstring.Color("Searching in [bold]default directory[default] ([light_blue]'"+rootDir+"'[default])"), false)
+	} else {
+		utils.Trace(colorstring.Color("Searching in [light_blue]'"+rootDir+"'[default] ..."), false)
+	}
+
 	maxDepth := commons.MAX_DEPTH
 	nbIgnoreSlashes := strings.Count(rootDir, "/")
 	nbGitFolders := 0
@@ -81,7 +86,7 @@ func listGitDirs() {
 		nbGitFolders++
 	}
 
-	utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folders", false)
+	utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folder(s)", false)
 
 	utils.PrintTable(gitFolders)
 }
