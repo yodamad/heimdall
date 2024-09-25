@@ -12,12 +12,16 @@ import (
 )
 
 func PrintBanner() {
-	fmt.Println("            _               _       _ _")
-	fmt.Println("  /\\  /\\___(_)_ __ ___   __| | __ _| | |")
-	fmt.Println(" / /_/ / _ \\ | '_ ` _ \\ / _` |/ _` | | |")
-	fmt.Println("/ __  /  __/ | | | | | | (_| | (_| | | |")
-	fmt.Println("\\/ /_/ \\___|_|_| |_| |_|\\__,_|\\__,_|_|_|")
-	fmt.Println("  ")
+	fmt.Print(colorstring.Color(
+		`[light_blue]            _               _       _ _ 
+  /\  /\___(_)_ __ ___   __| | __ _| | |
+ / /_/ / _ \ | '_ ` + "`" + ` _ \ / _` + "`" + ` |/ _` + "`" + ` | | |
+/ __  /  __/ | | | | | | (_| | (_| | | |
+\/ /_/ \___|_|_| |_| |_|\__,_|\__,_|_|_|
+[default]
+`,
+	))
+
 	if commons.Verbose {
 		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset] (commit %s), built at %s\n"), commons.Version, commons.Commit, commons.Date)
 	} else {
