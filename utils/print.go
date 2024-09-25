@@ -11,13 +11,6 @@ import (
 	"strings"
 )
 
-// ldflags vars
-var (
-	Version = "dev"
-	commit  = "none"
-	date    = "unknown"
-)
-
 func PrintBanner() {
 	fmt.Println("            _               _       _ _")
 	fmt.Println("  /\\  /\\___(_)_ __ ___   __| | __ _| | |")
@@ -26,9 +19,9 @@ func PrintBanner() {
 	fmt.Println("\\/ /_/ \\___|_|_| |_| |_|\\__,_|\\__,_|_|_|")
 	fmt.Println("  ")
 	if commons.Verbose {
-		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset] (commit %s), built at %s\n"), Version, commit, date)
+		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset] (commit %s), built at %s\n"), commons.Version, commons.Commit, commons.Date)
 	} else {
-		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset]\n"), Version)
+		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset]\n"), commons.Version)
 	}
 
 	fmt.Println("  ")
