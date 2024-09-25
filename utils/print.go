@@ -69,7 +69,7 @@ func visualDisplayBool(status bool) string {
 func displayRemoteChanges(remoteChanges string) string {
 	changes := strings.TrimSuffix(remoteChanges, "\n")
 	if len(changes) > 0 && changes != "0" {
-		return visualDisplayBool(true) + "(" + changes + ")"
+		return visualDisplayBool(true) + " (" + changes + ")"
 	} else {
 		return visualDisplayBool(false)
 	}
