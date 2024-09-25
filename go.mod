@@ -6,6 +6,7 @@ require (
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/jedib0t/go-pretty/v6 v6.5.9
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db
+	github.com/pkg/term v1.1.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
 )

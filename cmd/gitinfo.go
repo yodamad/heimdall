@@ -91,6 +91,19 @@ func listGitDirs() {
 	utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folder(s)", false)
 
 	utils.PrintTable(gitFolders)
+
+	if interactiveMode {
+		fmt.Println("...")
+		menu := utils.NewMenu("Interactive mode options")
+
+		menu.AddItem("Display local changes of a repository", "local")
+		menu.AddItem("Display remote changes of a repository", "remote")
+		menu.AddItem("Update one or several repositories ([dim]git pull[reset])", "pull")
+
+		choice := menu.Display()
+
+		fmt.Printf("Choice: %s\n", choice)
+	}
 }
 
 func checkIsGitDir(path string) (bool, error) {
@@ -140,5 +153,12 @@ func checkIfUpToDate(path string) (git.Status, error) {
 
 			return s, err
 		}
+	}
+}
+
+func listLocalChanges(s git.Status) {
+	for filename, _ := range s {
+		fileStatus := s.File(filename)
+		fmt.Printf("%s - %s - %s \n", s.IsUntracked(filename), fileStatus.Worktree, fileStatus.Staging)
 	}
 }
