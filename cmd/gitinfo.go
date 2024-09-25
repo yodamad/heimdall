@@ -133,7 +133,7 @@ func checkIfUpToDate(path string) (git.Status, error) {
 			gitFolders = append(gitFolders, entity.GitFolder{
 				Path:                 path,
 				CurrentBranch:        ref.Name().Short(),
-				HasLocalChanges:      s.IsClean(),
+				HasLocalChanges:      !s.IsClean(),
 				DetailedLocalChanges: s.String(),
 				RemoteChanges:        string(out),
 			})
