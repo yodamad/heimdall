@@ -54,7 +54,7 @@ func listGitDirs() {
 		}
 	}
 
-	if rootDir == commons.RootDir {
+	if rootDir == commons.DEFAULT_FOLDER {
 		utils.Trace(colorstring.Color("Searching in [bold]default directory[default] : [light_blue]'"+rootDir+"'[default]"), false)
 	} else {
 		utils.Trace(colorstring.Color("Searching in [light_blue]'"+rootDir+"'[default] ..."), false)
