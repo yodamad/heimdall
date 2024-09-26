@@ -121,6 +121,8 @@ func listGitDirs() {
 			switch choice {
 			case "local":
 				pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return folder.HasLocalChanges })
+			case "remote":
+				pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) })
 			}
 		}
 	} else {
