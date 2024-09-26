@@ -195,6 +195,9 @@ func chooseInteractiveOption() {
 	case "remote":
 		utils.PrintSeparation()
 		pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) })
+	case "pull":
+		utils.Trace("🚧 Not yet implemented...", false)
+		chooseInteractiveOption()
 	case "end":
 		return
 	}
@@ -216,7 +219,7 @@ func listLocalChanges(path string) {
 	repo.Fetch(&git.FetchOptions{})
 	w, _ := repo.Worktree()
 	s, _ := w.Status()
-	
+
 	utils.Trace(colorstring.Color("🚦 [dark_gray]"+strconv.Itoa(len(s))+" files"), false)
 	for filename, _ := range s {
 		fileStatus := s.File(filename)
