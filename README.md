@@ -17,9 +17,11 @@ brew tap yodamad/tools
 brew install heimdall
 ```
 
-__*On others:*__ ⚠️ Use it at your own risk *for now* ⚠️
+__*On Linux:*__ ⚠️ Use it at your own risk *for now* ⚠️
 
 There are available on [Release page](https://github.com/yodamad/heimdall/releases) but not well tested to be honest
+
+__*On Windows:*__ ❌ Not available for now, some compatibilities problems.
 
 ## Available options
 
