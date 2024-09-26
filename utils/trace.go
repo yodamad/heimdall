@@ -1,6 +1,9 @@
 package utils
 
-import log "github.com/sirupsen/logrus"
+import (
+	log "github.com/sirupsen/logrus"
+	"heimdall/commons"
+)
 
 func Trace(msg string, isDebug bool) {
 	if isDebug {
@@ -12,6 +15,8 @@ func Trace(msg string, isDebug bool) {
 }
 
 func TraceWarn(msg string) {
-	println(msg)
+	if commons.Verbose {
+		println(msg)
+	}
 	log.Warn(msg)
 }
