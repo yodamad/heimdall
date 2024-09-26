@@ -120,7 +120,8 @@ func listGitDirs() {
 
 			switch choice {
 			case "local":
-				pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return folder.HasLocalChanges })
+				folder := pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return folder.HasLocalChanges })
+				listLocalChanges(folder)
 			case "remote":
 				pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) })
 			}
@@ -186,10 +187,15 @@ func checkIfUpToDate(path string) (git.Status, error) {
 	}
 }
 
-func listLocalChanges(s git.Status) {
+func listLocalChanges(path string) {
+	repo, _ := git.PlainOpen(path)
+	repo.Fetch(&git.FetchOptions{})
+	w, _ := repo.Worktree()
+	s, _ := w.Status()
+
 	for filename, _ := range s {
 		fileStatus := s.File(filename)
-		fmt.Printf("%s - %s - %s \n", s.IsUntracked(filename), fileStatus.Worktree, fileStatus.Staging)
+		fmt.Printf("%s - %s \n", filename, string(fileStatus.Worktree))
 	}
 }
 
