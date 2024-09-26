@@ -63,8 +63,13 @@ func listGitDirs() {
 	maxDepth := commons.MAX_DEPTH
 	nbIgnoreSlashes := strings.Count(rootDir, "/")
 	nbGitFolders := 0
+	nbSkippedFolders := 0
 
-	rootIsGit, _ := checkIsGitDir(rootDir)
+	rootIsGit, err := checkIsGitDir(rootDir)
+	if err != nil && rootIsGit {
+		utils.Trace("Skip .git folder "+rootDir, false)
+		nbSkippedFolders++
+	}
 	if !rootIsGit {
 		filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
@@ -75,9 +80,14 @@ func listGitDirs() {
 				utils.Trace("Skip "+path, true)
 				return fs.SkipDir
 			} else if d.IsDir() {
+				err = nil
 				foundGit, err := checkIsGitDir(path)
 				if err == nil && foundGit {
 					nbGitFolders++
+					return fs.SkipDir
+				} else if err != nil && foundGit {
+					utils.Trace("Skip .git folder "+path, false)
+					nbSkippedFolders++
 					return fs.SkipDir
 				}
 			}
@@ -88,7 +98,7 @@ func listGitDirs() {
 		nbGitFolders++
 	}
 
-	utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folder(s)", false)
+	utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folder(s) (Skip "+strconv.Itoa(nbSkippedFolders)+" folders because of errors, use '-v' to check in details)", false)
 
 	utils.PrintTable(gitFolders)
 
@@ -115,7 +125,7 @@ func checkIsGitDir(path string) (bool, error) {
 		_, err = checkIfUpToDate(path)
 
 		if err != nil {
-			return false, err
+			return true, err
 		}
 
 		return true, nil
@@ -130,6 +140,7 @@ func checkIfUpToDate(path string) (git.Status, error) {
 		return nil, err
 	} else {
 		err := repo.Fetch(&git.FetchOptions{})
+
 		if err != nil && err.Error() != "already up-to-date" {
 			utils.TraceWarn("Cannot fetch " + path + ". Skip it... (" + err.Error() + ")")
 			return nil, err
