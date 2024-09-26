@@ -86,7 +86,8 @@ func listGitDirs() {
 					nbGitFolders++
 					return fs.SkipDir
 				} else if err != nil && foundGit {
-					utils.Trace("Skip .git folder "+path+" (root cause : "+err.Error()+")", false)
+					utils.Trace(colorstring.Color("⚠️ [light_yellow]Error analyzing [light_blue]"+path+"[light_yellow], skip it..."), false)
+					utils.TraceWarn("Skip .git folder " + path + " (root cause : " + err.Error() + ")")
 					nbSkippedFolders++
 					return fs.SkipDir
 				}
