@@ -120,7 +120,7 @@ func listGitDirs() {
 
 			switch choice {
 			case "local":
-				pickSingleItem(gitFolders)
+				pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return folder.HasLocalChanges })
 			}
 		}
 	} else {
@@ -191,10 +191,12 @@ func listLocalChanges(s git.Status) {
 	}
 }
 
-func pickSingleItem(items []entity.GitFolder) string {
+type filterFolder func(folder entity.GitFolder) bool
+
+func pickSingleItem(items []entity.GitFolder, fn filterFolder) string {
 	menu := utils.NewMenu("Pick one")
 	for _, item := range items {
-		if item.HasLocalChanges {
+		if fn(item) {
 			menu.AddItem(item.Path, item.Path)
 		}
 	}
