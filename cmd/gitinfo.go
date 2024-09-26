@@ -180,7 +180,7 @@ func chooseInteractiveOption() {
 		menu.AddItem("📤 Display local changes of a repository", "local")
 	}
 	if checkIfAtLeastOne(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) }) {
-		menu.AddItem("📥 Display remote changes of a repository", "remote")
+		menu.AddItem("📥 Display remote commits of a repository", "remote")
 	}
 	menu.AddItem("🔃 Update one or several repositories ([dim]git pull[reset])", "pull")
 	menu.AddItem("✅ I'm done", "end")

@@ -93,7 +93,7 @@ Searching in /home/user/work/...
 With interactive mode, you can easily:
 * Pick the folder you want to inspect
 * Display local changes of a picked folder after analyzing
-* Display remote changes of a picked folder after analyzing
+* Display remote commits of a picked folder after analyzing
 * (soon) Update one or several folders
 
 ```bash
