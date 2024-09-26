@@ -4,6 +4,8 @@ A CLI to help with your git directories (for now 😉).
 
 Based on the myth of the Nordic God, [Heimdall](https://en.wikipedia.org/wiki/Heimdall), the CLI is here to ease with your multiple Git repositories.
 
+A quick demo of the interactive mode.
+
 ![Simple demo](./assets/demo.gif)
 
 ## How to install
@@ -32,9 +34,13 @@ heimdall -h
 ```
 
 ```text
-Heimdall is a CLI tool to help you with your git folders.
-You can check, update, ... everything easily
+            _               _       _ _
+  /\  /\___(_)_ __ ___   __| | __ _| | |
+ / /_/ / _ \ | '_ ` _ \ / _` |/ _` | | |
+/ __  /  __/ | | | | | | (_| | (_| | | |
+\/ /_/ \___|_|_| |_| |_|\__,_|\__,_|_|_|
 
+Version dev
 
 Usage:
   heimdall [flags]
@@ -50,6 +56,7 @@ Available Commands:
 
 Flags:
   -h, --help              help for heimdall
+  -i, --i                 interactive mode
   -r, --root-dir string   root directory (default ".")
   -v, --verbose           verbose output
 
@@ -79,4 +86,63 @@ Searching in /home/user/work/...
 +---------------------------------------+--------+---------------+----------------+
 | /home/user/work/project4              |  main  |       🔴      |       🟢       |
 +---------------------------------------+--------+---------------+----------------+
+```
+
+### `-i` : Interactive mode
+
+With interactive mode, you can easily:
+* Pick the folder you want to inspect
+* Display local changes of a picked folder after analyzing
+* Display remote changes of a picked folder after analyzing
+* (soon) Update one or several folders
+
+```bash
+heimdall git-info -i
+```
+
+```shell
+            _               _       _ _
+  /\  /\___(_)_ __ ___   __| | __ _| | |
+ / /_/ / _ \ | '_ ` _ \ / _` |/ _` | | |
+/ __  /  __/ | | | | | | (_| | (_| | | |
+\/ /_/ \___|_|_| |_| |_|\__,_|\__,_|_|_|
+
+Version 0.0.4
+
+🔍 Search in directory /Users/admin_local/work/gitlab/fun-with/fun-with-k8s [Y/n] :
+Searching in '/Users/admin_local/work/gitlab/fun-with/fun-with-k8s' ...
+⚠️ Error analyzing /Users/admin_local/work/gitlab/fun-with/fun-with-k8s/external-api, skip it...
+...
+Found 4 folder(s) (Skip 1 folders because of errors, use '-v' to check in details)
++------------------------------------------------------------------------------------------+--------+---------------+----------------+
+| PATH                                                                                     | BRANCH | LOCAL_CHANGES | REMOTE_CHANGES |
++------------------------------------------------------------------------------------------+--------+---------------+----------------+
+| /Users/admin_local/work/gitlab/fun-with/fun-with-k8s/external-dns                        |  main  |       🔴      |       🟢       |
++------------------------------------------------------------------------------------------+--------+---------------+----------------+
+| /Users/admin_local/work/gitlab/fun-with/fun-with-k8s/fun-with-fluxcd                     |  main  |       🟢      |       🟢       |
++------------------------------------------------------------------------------------------+--------+---------------+----------------+
+| /Users/admin_local/work/gitlab/fun-with/fun-with-k8s/fun-with-kyverno                    |  main  |       🔴      |       🟢       |
++------------------------------------------------------------------------------------------+--------+---------------+----------------+
+| /Users/admin_local/work/gitlab/fun-with/fun-with-k8s/fun-with-vault-and-external-secrets |  main  |       🟢      |       🟢       |
++------------------------------------------------------------------------------------------+--------+---------------+----------------+
+...
+Interactive mode options:
+[X] 📤 Display local changes of a repository
+[ ] 🔃 Update one or several repositories (git pull)
+[ ] ✅ I'm done
+Pick one:
+[X] /Users/admin_local/work/gitlab/fun-with/fun-with-k8s/external-dns
+[ ] /Users/admin_local/work/gitlab/fun-with/fun-with-k8s/fun-with-kyverno
+...
+🚦 1 files
+hashnode-demo.yaml - M
+...
+What to do next::
+[X] 🔄 Check another folder
+[ ] ✅ I'm done
+...
+Interactive mode options:
+[ ] 📤 Display local changes of a repository
+[ ] 🔃 Update one or several repositories (git pull)
+[X] ✅ I'm done
 ```
