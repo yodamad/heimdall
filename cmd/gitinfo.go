@@ -118,7 +118,10 @@ func listGitDirs() {
 
 			choice := menu.Display()
 
-			fmt.Printf("Choice: %s\n", choice)
+			switch choice {
+			case "local":
+				pickSingleItem(gitFolders)
+			}
 		}
 	} else {
 		if nbSkippedFolders > 0 {
@@ -186,4 +189,15 @@ func listLocalChanges(s git.Status) {
 		fileStatus := s.File(filename)
 		fmt.Printf("%s - %s - %s \n", s.IsUntracked(filename), fileStatus.Worktree, fileStatus.Staging)
 	}
+}
+
+func pickSingleItem(items []entity.GitFolder) string {
+	menu := utils.NewMenu("Pick one")
+	for _, item := range items {
+		if item.HasLocalChanges {
+			menu.AddItem(item.Path, item.Path)
+		}
+	}
+	choice := menu.Display()
+	return choice
 }
