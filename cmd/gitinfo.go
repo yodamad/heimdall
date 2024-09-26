@@ -99,21 +99,25 @@ func listGitDirs() {
 		nbGitFolders++
 	}
 
-	utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folder(s) (Skip "+strconv.Itoa(nbSkippedFolders)+" folders because of errors, use '-v' to check in details)", false)
+	if nbGitFolders > 0 {
+		utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folder(s) (Skip "+strconv.Itoa(nbSkippedFolders)+" folders because of errors, use '-v' to check in details)", false)
+		utils.PrintTable(gitFolders)
 
-	utils.PrintTable(gitFolders)
+		if interactiveMode {
+			fmt.Println("...")
+			menu := utils.NewMenu("Interactive mode options")
 
-	if interactiveMode {
-		fmt.Println("...")
-		menu := utils.NewMenu("Interactive mode options")
+			menu.AddItem("Display local changes of a repository", "local")
+			menu.AddItem("Display remote changes of a repository", "remote")
+			menu.AddItem("Update one or several repositories ([dim]git pull[reset])", "pull")
 
-		menu.AddItem("Display local changes of a repository", "local")
-		menu.AddItem("Display remote changes of a repository", "remote")
-		menu.AddItem("Update one or several repositories ([dim]git pull[reset])", "pull")
+			choice := menu.Display()
 
-		choice := menu.Display()
-
-		fmt.Printf("Choice: %s\n", choice)
+			fmt.Printf("Choice: %s\n", choice)
+		}
+	} else {
+		utils.Trace("😕 No git folder found (Skip "+strconv.Itoa(nbSkippedFolders)+" folders because of errors, use '-v' to check in details)", false)
+		utils.Trace(colorstring.Color("Is [light_blue]"+rootDir+"[default] the correct path ?"), false)
 	}
 }
 
