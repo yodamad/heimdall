@@ -31,6 +31,10 @@ func PrintBanner() {
 	fmt.Println("  ")
 }
 
+func PrintSeparation() {
+	fmt.Println("...")
+}
+
 func PrintTable(gitFolders []entity.GitFolder) {
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)

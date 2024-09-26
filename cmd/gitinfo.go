@@ -99,7 +99,7 @@ func listGitDirs() {
 		nbGitFolders++
 	}
 
-	utils.Trace("---------------", false)
+	utils.PrintSeparation()
 	if nbGitFolders > 0 {
 		if nbSkippedFolders > 0 {
 			utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folder(s) (Skip "+strconv.Itoa(nbSkippedFolders)+" folders because of errors, use '-v' to check in details)", false)
@@ -109,22 +109,7 @@ func listGitDirs() {
 		utils.PrintTable(gitFolders)
 
 		if interactiveMode {
-			fmt.Println("...")
-			menu := utils.NewMenu("Interactive mode options")
-
-			menu.AddItem("Display local changes of a repository", "local")
-			menu.AddItem("Display remote changes of a repository", "remote")
-			menu.AddItem("Update one or several repositories ([dim]git pull[reset])", "pull")
-
-			choice := menu.Display()
-
-			switch choice {
-			case "local":
-				folder := pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return folder.HasLocalChanges })
-				listLocalChanges(folder)
-			case "remote":
-				pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) })
-			}
+			chooseInteractiveOption()
 		}
 	} else {
 		if nbSkippedFolders > 0 {
@@ -187,19 +172,69 @@ func checkIfUpToDate(path string) (git.Status, error) {
 	}
 }
 
+func chooseInteractiveOption() {
+	utils.PrintSeparation()
+	menu := utils.NewMenu("Interactive mode options")
+
+	if checkIfAtLeastOne(gitFolders, func(folder entity.GitFolder) bool { return folder.HasLocalChanges }) {
+		menu.AddItem("📤 Display local changes of a repository", "local")
+	}
+	if checkIfAtLeastOne(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) }) {
+		menu.AddItem("📥 Display remote changes of a repository", "remote")
+	}
+	menu.AddItem("🔃 Update one or several repositories ([dim]git pull[reset])", "pull")
+	menu.AddItem("✅ I'm done", "end")
+
+	choice := menu.Display()
+
+	switch choice {
+	case "local":
+		folder := pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return folder.HasLocalChanges })
+		utils.PrintSeparation()
+		listLocalChanges(folder)
+	case "remote":
+		utils.PrintSeparation()
+		pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) })
+	case "end":
+		return
+	}
+	menu = utils.NewMenu("What to do next:")
+	menu.AddItem("🔄 Check another folder", "restart")
+	menu.AddItem("✅ I'm done", "end")
+	choice = menu.Display()
+
+	switch choice {
+	case "restart":
+		chooseInteractiveOption()
+	case "end":
+		return
+	}
+}
+
 func listLocalChanges(path string) {
 	repo, _ := git.PlainOpen(path)
 	repo.Fetch(&git.FetchOptions{})
 	w, _ := repo.Worktree()
 	s, _ := w.Status()
-
+	
+	utils.Trace(colorstring.Color("🚦 [dark_gray]"+strconv.Itoa(len(s))+" files"), false)
 	for filename, _ := range s {
 		fileStatus := s.File(filename)
 		fmt.Printf("%s - %s \n", filename, string(fileStatus.Worktree))
 	}
+	utils.PrintSeparation()
 }
 
 type filterFolder func(folder entity.GitFolder) bool
+
+func checkIfAtLeastOne(items []entity.GitFolder, fn filterFolder) bool {
+	for _, item := range items {
+		if fn(item) {
+			return true
+		}
+	}
+	return false
+}
 
 func pickSingleItem(items []entity.GitFolder, fn filterFolder) string {
 	menu := utils.NewMenu("Pick one")
