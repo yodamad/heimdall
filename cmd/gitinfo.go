@@ -194,7 +194,8 @@ func chooseInteractiveOption() {
 		listLocalChanges(folder)
 	case "remote":
 		utils.PrintSeparation()
-		pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) })
+		folder := pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) })
+		listRemoteChanges(folder)
 	case "pull":
 		utils.Trace("🚧 Not yet implemented...", false)
 		chooseInteractiveOption()
@@ -226,6 +227,17 @@ func listLocalChanges(path string) {
 		fmt.Printf("%s - %s \n", filename, string(fileStatus.Worktree))
 	}
 	utils.PrintSeparation()
+}
+
+func listRemoteChanges(gitFolder string) {
+	repo, _ := git.PlainOpen(gitFolder)
+	ref, _ := repo.Head()
+	out, _ := exec.Command("git", "-C", gitFolder, "log", "--oneline", ref.Name().Short()+"..origin/"+ref.Name().Short()).Output()
+
+	fullOutput := string(out)
+
+	utils.Trace(colorstring.Color("🚦 [dark_gray]"+strconv.Itoa(strings.Count(fullOutput, "\n"))+" commits"), false)
+	utils.Trace(string(out), false)
 }
 
 type filterFolder func(folder entity.GitFolder) bool
