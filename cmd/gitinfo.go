@@ -105,19 +105,19 @@ func listGitDirs() {
 
 	utils.PrintSeparation()
 	if nbGitFolders > 0 {
-		if nbSkippedFolders > 0 {
-			utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folder(s) (Skip "+strconv.Itoa(nbSkippedFolders)+" folders because of errors, use '-v' to check in details)", false)
-		} else {
-			utils.Trace("Found "+strconv.Itoa(nbGitFolders)+" folder(s)", false)
-		}
 		utils.PrintTable(gitFolders)
-
+		if nbSkippedFolders > 0 {
+			utils.Trace(colorstring.Color("Found [green]"+strconv.Itoa(nbGitFolders)+"[default] folder(s) (Skip [yellow]"+strconv.Itoa(nbSkippedFolders)+"[default] folders because of errors, use '-v' to check in details)"), false)
+		} else {
+			utils.Trace(colorstring.Color("Found [green]"+strconv.Itoa(nbGitFolders)+"[default] folder(s)"), false)
+		}
+		
 		if interactiveMode {
 			chooseInteractiveOption()
 		}
 	} else {
 		if nbSkippedFolders > 0 {
-			utils.Trace(colorstring.Color("😕 [red]No git folder found[default] (Skip "+strconv.Itoa(nbSkippedFolders)+" folders because of errors, use '-v' to check in details)"), false)
+			utils.Trace(colorstring.Color("😕 [red]No git folder found[default] (Skip [yellow]"+strconv.Itoa(nbSkippedFolders)+"[default] folders because of errors, use '-v' to check in details)"), false)
 		} else {
 			utils.Trace(colorstring.Color("😕 [red]No git folder found"), false)
 		}
