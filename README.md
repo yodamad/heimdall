@@ -68,7 +68,34 @@ Use "heimdall [command] --help" for more information about a command.
 
 This option helps you with your git repositories. It will list them and tell you if they are up-to-date or not.
 
-The command do a local and a remote checks
+```shell
+  /\  /\___(_)_ __ ___   __| | __ _| | |
+ / /_/ / _ \ | '_ ` _ \ / _` |/ _` | | |
+/ __  /  __/ | | | | | | (_| | (_| | | |
+\/ /_/ \___|_|_| |_| |_|\__,_|\__,_|_|_|
+
+Version dev
+
+Usage:
+  heimdall git-info [flags]
+
+	Aliases:
+  git-info, gi
+
+Flags:
+  -d, --depth int   search depth (default 3)
+  -h, --help        help for git-info
+
+Global Flags:
+  -i, --i                 interactive mode
+  -l, --log-dir string    log directory (default ".")
+  -r, --root-dir string   root directory (default ".")
+  -v, --verbose           verbose output
+```
+
+The command do a local and a remote checks.
+
+By default, it will search in the current directory, but you can override this with `-r` flag. Also, it searches no more then 3 levels of subdirectories, you can override this with the `-d` flag.
 
 ```bash
 heimdall git-info -r /home/user/work/

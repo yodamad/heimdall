@@ -17,13 +17,13 @@ import (
 	"strings"
 )
 
+var searchDepth = commons.MAX_DEPTH
 var gitFolders = []entity.GitFolder{}
 
 var GitInfo = &cobra.Command{
 	Use:     "git-info",
 	Aliases: []string{"gi"},
 	Short:   "List all directories containing a `.git` folder",
-
 	Run: func(cmd *cobra.Command, args []string) {
 		utils.OverrideLogFile()
 		utils.PrintBanner()
@@ -32,6 +32,10 @@ var GitInfo = &cobra.Command{
 		}
 		listGitDirs()
 	},
+}
+
+func init() {
+	GitInfo.Flags().IntVarP(&searchDepth, "depth", "d", commons.MAX_DEPTH, "search depth")
 }
 
 func listGitDirs() {
@@ -61,7 +65,6 @@ func listGitDirs() {
 		utils.Trace(colorstring.Color("Searching in [light_blue]'"+rootDir+"'[default] ..."), false)
 	}
 
-	maxDepth := commons.MAX_DEPTH
 	nbIgnoreSlashes := strings.Count(rootDir, "/")
 	nbGitFolders := 0
 	nbSkippedFolders := 0
@@ -77,7 +80,7 @@ func listGitDirs() {
 				// handle possible path err, just in case...
 				return err
 			}
-			if d.IsDir() && (strings.Count(path, string(os.PathSeparator))-nbIgnoreSlashes) > maxDepth {
+			if d.IsDir() && (strings.Count(path, string(os.PathSeparator))-nbIgnoreSlashes) >= searchDepth {
 				utils.Trace("Skip "+path, true)
 				return fs.SkipDir
 			} else if d.IsDir() {
