@@ -37,6 +37,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&commons.RootDir, "root-dir", "r", commons.DEFAULT_FOLDER, "root directory")
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().BoolVarP(&commons.Interactive, "i", "i", false, "interactive mode")
+	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DEFAULT_FOLDER, "log directory")
 
 	log.SetFormatter(&log.TextFormatter{
 		DisableLevelTruncation: true,
@@ -57,6 +58,7 @@ func init() {
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
+		utils.OverrideLogFile()
 		fmt.Println(err)
 		os.Exit(1)
 	}

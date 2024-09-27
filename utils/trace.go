@@ -3,6 +3,7 @@ package utils
 import (
 	log "github.com/sirupsen/logrus"
 	"heimdall/commons"
+	"os"
 )
 
 func Trace(msg string, isDebug bool) {
@@ -19,4 +20,12 @@ func TraceWarn(msg string) {
 		println(msg)
 	}
 	log.Warn(msg)
+}
+
+func OverrideLogFile() {
+	if commons.LogDir != commons.DEFAULT_FOLDER {
+		os.RemoveAll("heimdall.log")
+		f, _ := os.OpenFile(commons.LogDir+"/heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		log.SetOutput(f)
+	}
 }

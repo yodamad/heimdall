@@ -57,6 +57,7 @@ Available Commands:
 Flags:
   -h, --help              help for heimdall
   -i, --i                 interactive mode
+  -l, --log-dir string    log directory (default ".")
   -r, --root-dir string   root directory (default ".")
   -v, --verbose           verbose output
 

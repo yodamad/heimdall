@@ -25,6 +25,9 @@ const MAX_DEPTH = 3
 // RootDir /* Which directory to start from */
 var RootDir string
 
+// LogDir /* Which directory to log in */
+var LogDir string
+
 // Verbose /* Verbose log */
 var Verbose bool
 
