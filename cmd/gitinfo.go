@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-git/go-git/v5"
 	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
@@ -9,6 +10,7 @@ import (
 	"heimdall/cmd/entity"
 	"heimdall/commons"
 	"heimdall/utils"
+	"heimdall/utils/tui"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -111,7 +113,6 @@ func listGitDirs() {
 		} else {
 			utils.Trace(colorstring.Color("Found [green]"+strconv.Itoa(nbGitFolders)+"[default] folder(s)"), false)
 		}
-		
 		if interactiveMode {
 			chooseInteractiveOption()
 		}
@@ -178,43 +179,55 @@ func checkIfUpToDate(path string) (git.Status, error) {
 
 func chooseInteractiveOption() {
 	utils.PrintSeparation()
-	menu := utils.NewMenu("Interactive mode options")
 
+	var choices = []string{}
 	if checkIfAtLeastOne(gitFolders, func(folder entity.GitFolder) bool { return folder.HasLocalChanges }) {
-		menu.AddItem("📤 Display local changes of a repository", "local")
+		choices = append(choices, "📤 Display local changes of a repository")
 	}
 	if checkIfAtLeastOne(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) }) {
-		menu.AddItem("📥 Display remote commits of a repository", "remote")
+		choices = append(choices, "📥 Display remote commits of a repository")
 	}
-	menu.AddItem("🔃 Update one or several repositories ([dim]git pull[reset])", "pull")
-	menu.AddItem("✅ I'm done", "end")
+	choices = append(choices, colorstring.Color("🔃 Update one or several repositories ([dim]git pull[reset])"))
+	choices = append(choices, "✅ I'm done")
 
-	choice := menu.Display()
+	p := tea.NewProgram(tui.InitialChoiceModel("Interactive mode options", choices))
+	m, err := p.Run()
+	if err != nil {
+		fmt.Printf("Alas, there's been an error: %v", err)
+		os.Exit(1)
+	}
 
+	choice := m.(tui.ChoiceModel).Picked()
 	switch choice {
-	case "local":
+	case "📤 Display local changes of a repository":
 		folder := pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return folder.HasLocalChanges })
 		utils.PrintSeparation()
 		listLocalChanges(folder)
-	case "remote":
+	case "📥 Display remote commits of a repository":
 		utils.PrintSeparation()
 		folder := pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) })
 		listRemoteChanges(folder)
-	case "pull":
+	case colorstring.Color("🔃 Update one or several repositories ([dim]git pull[reset])"):
 		utils.Trace("🚧 Not yet implemented...", false)
 		chooseInteractiveOption()
-	case "end":
-		return
+	case "✅ I'm done":
+		os.Exit(0)
 	}
-	menu = utils.NewMenu("What to do next:")
-	menu.AddItem("🔄 Check another folder", "restart")
-	menu.AddItem("✅ I'm done", "end")
-	choice = menu.Display()
+
+	choices = []string{"🔄 Check another folder", "✅ I'm done"}
+	p = tea.NewProgram(tui.InitialChoiceModel("What to do next", choices))
+	m, err = p.Run()
+	if err != nil {
+		fmt.Printf("Alas, there's been an error: %v", err)
+		os.Exit(1)
+	}
+
+	choice = m.(tui.ChoiceModel).Picked()
 
 	switch choice {
-	case "restart":
+	case "🔄 Check another folder":
 		chooseInteractiveOption()
-	case "end":
+	case "✅ I'm done":
 		return
 	}
 }
@@ -256,12 +269,19 @@ func checkIfAtLeastOne(items []entity.GitFolder, fn filterFolder) bool {
 }
 
 func pickSingleItem(items []entity.GitFolder, fn filterFolder) string {
-	menu := utils.NewMenu("Pick one")
+	var choices []string
 	for _, item := range items {
 		if fn(item) {
-			menu.AddItem(item.Path, item.Path)
+			choices = append(choices, item.Path)
 		}
 	}
-	choice := menu.Display()
+	p := tea.NewProgram(tui.InitialChoiceModel("Pick one", choices))
+	m, err := p.Run()
+	if err != nil {
+		fmt.Printf("Alas, there's been an error: %v", err)
+		os.Exit(1)
+	}
+
+	choice := m.(tui.ChoiceModel).Picked()
 	return choice
 }
