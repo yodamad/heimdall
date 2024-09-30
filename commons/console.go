@@ -1,15 +1,12 @@
 package commons
 
 import (
-	"bufio"
-	"fmt"
-	"os"
-	"strings"
+	tea "github.com/charmbracelet/bubbletea"
+	"heimdall/utils/tui"
 )
 
-func AskQuestion(question string) string {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print(question)
-	rawInput, _ := reader.ReadString(EOL_BYTE)
-	return strings.TrimRight(rawInput, EOL)
+func AskQuestion(question string, defaultAnswer string) string {
+	p := tea.NewProgram(tui.InitialInputModel(question, defaultAnswer))
+	m, _ := p.Run()
+	return m.(tui.InputModel).TextInput.Value()
 }

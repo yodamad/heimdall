@@ -46,10 +46,10 @@ func listGitDirs() {
 	answer := "n"
 
 	for interactiveMode && !strings.EqualFold(answer, "y") {
-		answer = commons.AskQuestion(colorstring.Color("🔍 Search in directory [light_blue]" + rootDir + "[default] [light_gray][Y/n][default] : "))
+		answer = commons.AskQuestion(colorstring.Color("🔍 Search in directory [light_blue]"+rootDir+"[default] [light_gray][Y/n][default] : "), "Y")
 		if strings.EqualFold(answer, "n") {
 			if strings.EqualFold(answer, "n") {
-				answer = commons.AskQuestion(colorstring.Color("➡️ Directory to search in : "))
+				answer = commons.AskQuestion(colorstring.Color("➡️ Directory to search in : "), rootDir)
 			}
 			rootDir = answer
 		} else if answer == "" {
