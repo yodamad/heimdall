@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-git/go-git/v5"
 	"github.com/mitchellh/colorstring"
@@ -61,12 +62,33 @@ func listGitDirs() {
 		}
 	}
 
-	if rootDir == commons.DEFAULT_FOLDER {
-		utils.Trace(colorstring.Color("Searching in [bold]default directory[default] : [light_blue]'"+rootDir+"'[default]"), false)
-	} else {
-		utils.Trace(colorstring.Color("Searching in [light_blue]'"+rootDir+"'[default] ..."), false)
+	// Initialize the spinner
+	s := spinner.New()
+	s.Spinner = spinner.Points
+	s.Style = tui.SpinnerStyle
+
+	// Create the model
+	m := tui.SpinnerModel{
+		Spinner: s,
 	}
 
+	if rootDir == commons.DEFAULT_FOLDER {
+		m.Text = colorstring.Color("Searching in [bold]default directory[default] : [light_blue]'" + rootDir + "'[default]")
+	} else {
+		m.Text = colorstring.Color("Searching in [light_blue]'" + rootDir + "'[default] ...")
+	}
+
+	// Start the spinner
+	prg := tea.NewProgram(m)
+	go func() {
+		if _, err := prg.Run(); err != nil {
+		}
+	}()
+
+	checkDir(rootDir, prg)
+}
+
+func checkDir(rootDir string, spinner *tea.Program) tea.Cmd {
 	nbIgnoreSlashes := strings.Count(rootDir, "/")
 	nbGitFolders := 0
 	nbSkippedFolders := 0
@@ -92,8 +114,7 @@ func listGitDirs() {
 					nbGitFolders++
 					return fs.SkipDir
 				} else if err != nil && foundGit {
-					utils.Trace(colorstring.Color("⚠️ [light_yellow]Error analyzing [light_blue]"+path+"[light_yellow], skip it..."), false)
-					utils.TraceWarn("Skip .git folder " + path + " (root cause : " + err.Error() + ")")
+					spinner.Send(tui.PrintMessage{Path: path})
 					nbSkippedFolders++
 					return fs.SkipDir
 				}
@@ -104,6 +125,8 @@ func listGitDirs() {
 	} else {
 		nbGitFolders++
 	}
+	spinner.Send(tui.TheEndMessage())
+	spinner.ReleaseTerminal()
 
 	utils.PrintSeparation()
 	if nbGitFolders > 0 {
@@ -113,7 +136,7 @@ func listGitDirs() {
 		} else {
 			utils.Trace(colorstring.Color("Found [green]"+strconv.Itoa(nbGitFolders)+"[default] folder(s)"), false)
 		}
-		if interactiveMode {
+		if commons.Interactive {
 			chooseInteractiveOption()
 		}
 	} else {
@@ -124,6 +147,8 @@ func listGitDirs() {
 		}
 		utils.Trace(colorstring.Color("🤔 Is [light_blue]"+rootDir+"[default] the correct path ?"), false)
 	}
+
+	return tea.Quit
 }
 
 func checkIsGitDir(path string) (bool, error) {
@@ -131,7 +156,6 @@ func checkIsGitDir(path string) (bool, error) {
 	_, err := os.Stat(path + "/.git")
 	if err == nil {
 		utils.Trace("Found a .git folder : "+path, true)
-
 		_, err = checkIfUpToDate(path)
 
 		if err != nil {
@@ -146,13 +170,11 @@ func checkIsGitDir(path string) (bool, error) {
 func checkIfUpToDate(path string) (git.Status, error) {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
-		utils.TraceWarn("Cannot check " + path + ". Skip it... (" + err.Error() + ")")
 		return nil, err
 	} else {
 		err := repo.Fetch(&git.FetchOptions{})
 
 		if err != nil && err.Error() != "already up-to-date" {
-			utils.TraceWarn("Cannot fetch " + path + ". Skip it... (" + err.Error() + ")")
 			return nil, err
 		} else {
 			w, err := repo.Worktree()
