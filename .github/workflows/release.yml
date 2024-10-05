@@ -26,3 +26,6 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      -
+        name: Publish to pkg.go.dev
+        run:  GOPROXY=proxy.golang.org go list -m github.com/yodamad/heimdall@${{ github.event.inputs.tag }}

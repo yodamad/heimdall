@@ -1,4 +1,4 @@
-module heimdall
+module github.com/yodamad/heimdall
 
 go 1.23.0
 
