@@ -8,10 +8,10 @@ import (
 	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"heimdall/cmd/entity"
-	"heimdall/commons"
-	"heimdall/utils"
-	"heimdall/utils/tui"
+	"github.com/yodamad/heimdall/cmd/entity"
+	"github.com/yodamad/heimdall/commons"
+	"github.com/yodamad/heimdall/utils"
+	"github.com/yodamad/heimdall/utils/tui"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -21,7 +21,7 @@ import (
 )
 
 var searchDepth = commons.MAX_DEPTH
-var gitFolders = []entity.GitFolder{}
+var gitFolders []entity.GitFolder
 
 var GitInfo = &cobra.Command{
 	Use:     "git-info",
@@ -231,6 +231,7 @@ func chooseInteractiveOption() {
 		listRemoteChanges(folder)
 	case colorstring.Color("🔃 Update one or several repositories ([dim]git pull[reset])"):
 		utils.Trace("🚧 Not yet implemented...", false)
+		selectItems(gitFolders)
 		chooseInteractiveOption()
 	case "✅ I'm done":
 		os.Exit(0)
@@ -306,4 +307,21 @@ func pickSingleItem(items []entity.GitFolder, fn filterFolder) string {
 
 	choice := m.(tui.ChoiceModel).Picked()
 	return choice
+}
+
+func selectItems(items []entity.GitFolder) []entity.GitFolder {
+	utils.PrintSeparation()
+	var q = colorstring.Color("[light_blue]Pick repositories to update:[default]")
+	p := tea.NewProgram(tui.InitialMenuModel(q, items))
+	m, err := p.Run()
+	if err != nil {
+		fmt.Printf("Alas, there's been an error: %v", err)
+		os.Exit(1)
+	}
+
+	var picked []entity.GitFolder
+	for index, _ := range m.(tui.MenuModel).Selected {
+		picked = append(picked, m.(tui.MenuModel).Selected[index])
+	}
+	return picked
 }
