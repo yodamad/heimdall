@@ -97,6 +97,6 @@ func (m MenuModel) View() string {
 		}
 	}
 
-	s += "\nPress q to quit.\n"
+	s += "\nPress q when done\n"
 	return s
 }
