@@ -2,7 +2,7 @@ package utils
 
 import (
 	log "github.com/sirupsen/logrus"
-	"heimdall/commons"
+	"github.com/yodamad/heimdall/commons"
 	"os"
 )
 

@@ -5,9 +5,9 @@ import (
 	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"heimdall/cmd"
-	"heimdall/commons"
-	"heimdall/utils"
+	"github.com/yodamad/heimdall/cmd"
+	"github.com/yodamad/heimdall/commons"
+	"github.com/yodamad/heimdall/utils"
 	"os"
 )
 

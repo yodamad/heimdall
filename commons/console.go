@@ -2,7 +2,7 @@ package commons
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"heimdall/utils/tui"
+	"github.com/yodamad/heimdall/utils/tui"
 )
 
 func AskQuestion(question string, defaultAnswer string) string {

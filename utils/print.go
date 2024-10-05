@@ -5,8 +5,8 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/mitchellh/colorstring"
-	"heimdall/cmd/entity"
-	"heimdall/commons"
+	"github.com/yodamad/heimdall/cmd/entity"
+	"github.com/yodamad/heimdall/commons"
 	"os"
 	"strings"
 )
