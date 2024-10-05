@@ -209,7 +209,9 @@ func chooseInteractiveOption() {
 	if checkIfAtLeastOne(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) }) {
 		choices = append(choices, "📥 Display remote commits of a repository")
 	}
-	choices = append(choices, colorstring.Color("🔃 Update one or several repositories ([dim]git pull[reset])"))
+	if checkIfAtLeastOne(gitFolders, func(folder entity.GitFolder) bool { return entity.CanPull(folder) }) {
+		choices = append(choices, colorstring.Color("🔃 Update one or several repositories ([dim]git pull[reset])"))
+	}
 	choices = append(choices, "✅ I'm done")
 
 	p := tea.NewProgram(tui.InitialChoiceModel("Interactive mode options", choices))
@@ -231,7 +233,7 @@ func chooseInteractiveOption() {
 		listRemoteChanges(folder)
 	case colorstring.Color("🔃 Update one or several repositories ([dim]git pull[reset])"):
 		utils.Trace("🚧 Not yet implemented...", false)
-		selectItems(gitFolders)
+		selectItems(gitFolders, func(folder entity.GitFolder) bool { return entity.CanPull(folder) })
 		chooseInteractiveOption()
 	case "✅ I'm done":
 		os.Exit(0)
@@ -309,10 +311,18 @@ func pickSingleItem(items []entity.GitFolder, fn filterFolder) string {
 	return choice
 }
 
-func selectItems(items []entity.GitFolder) []entity.GitFolder {
+func selectItems(items []entity.GitFolder, fn filterFolder) []entity.GitFolder {
 	utils.PrintSeparation()
 	var q = colorstring.Color("[light_blue]Pick repositories to update:[default]")
-	p := tea.NewProgram(tui.InitialMenuModel(q, items))
+
+	var filteredItems []entity.GitFolder
+	for _, item := range items {
+		if fn(item) {
+			filteredItems = append(filteredItems, item)
+		}
+	}
+
+	p := tea.NewProgram(tui.InitialMenuModel(q, filteredItems))
 	m, err := p.Run()
 	if err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
