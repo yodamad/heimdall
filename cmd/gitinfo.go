@@ -232,8 +232,14 @@ func chooseInteractiveOption() {
 		folder := pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) })
 		listRemoteChanges(folder)
 	case colorstring.Color("🔃 Update one or several repositories ([dim]git pull[reset])"):
-		utils.Trace("🚧 Not yet implemented...", false)
-		selectItems(gitFolders, func(folder entity.GitFolder) bool { return entity.CanPull(folder) })
+		toUpdate := selectItems(gitFolders, func(folder entity.GitFolder) bool { return entity.CanPull(folder) })
+		utils.PrintSeparation()
+		if len(toUpdate) > 0 {
+			utils.Trace(colorstring.Color("[light_blue]Pulling repositories :[default]\n"), false)
+		}
+		for _, folder := range toUpdate {
+			gitPull(folder)
+		}
 		chooseInteractiveOption()
 	case "✅ I'm done":
 		os.Exit(0)
@@ -334,4 +340,14 @@ func selectItems(items []entity.GitFolder, fn filterFolder) []entity.GitFolder {
 		picked = append(picked, m.(tui.MenuModel).Selected[index])
 	}
 	return picked
+}
+
+func gitPull(folder entity.GitFolder) {
+	repo, _ := git.PlainOpen(folder.Path)
+	worktree, _ := repo.Worktree()
+	err := worktree.Pull(&git.PullOptions{RemoteName: "origin"})
+	if err != nil {
+		utils.TraceWarn("Cannot pull : " + err.Error())
+	}
+	utils.Trace(colorstring.Color("✅ [bold]"+folder.Path+"[reset] pulled"), false)
 }

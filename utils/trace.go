@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/yodamad/heimdall/commons"
 	"os"
@@ -17,7 +18,7 @@ func Trace(msg string, isDebug bool) {
 
 func TraceWarn(msg string) {
 	if commons.Verbose {
-		println(msg)
+		println(colorstring.Color("[light_yellow]" + msg + "[default]"))
 	}
 	log.Warn(msg)
 }
