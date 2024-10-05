@@ -15,7 +15,7 @@ type ChoiceModel struct {
 
 func InitialChoiceModel(title string, choices []string) ChoiceModel {
 	return ChoiceModel{
-		title: colorstring.Color("[light_blue]" + title + ":[default]"),
+		title: colorstring.Color(TitleColor + title + ":[default]"),
 		// Our to-do list is a grocery list
 		choices: choices,
 

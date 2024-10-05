@@ -47,7 +47,7 @@ func listGitDirs() {
 	answer := "n"
 
 	for interactiveMode && !strings.EqualFold(answer, "y") {
-		answer = commons.AskQuestion(colorstring.Color("🔍 Search in directory [light_blue]"+rootDir+"[default] [light_gray][Y/n][default] : "), "Y")
+		answer = commons.AskQuestion(colorstring.Color("🔍 Search in directory "+tui.PathColor+rootDir+"[default] [light_gray][Y/n][default] : "), "Y")
 		if strings.EqualFold(answer, "n") {
 			if strings.EqualFold(answer, "n") {
 				answer = commons.AskQuestion(colorstring.Color("➡️ Directory to search in : "), rootDir)
@@ -73,9 +73,9 @@ func listGitDirs() {
 	}
 
 	if rootDir == commons.DEFAULT_FOLDER {
-		m.Text = colorstring.Color("Searching in [bold]default directory[default] : [light_blue]'" + rootDir + "'[default]")
+		m.Text = colorstring.Color("Searching in [bold]default directory[default] : " + tui.PathColor + "'" + rootDir + "'[default]")
 	} else {
-		m.Text = colorstring.Color("Searching in [light_blue]'" + rootDir + "'[default] ...")
+		m.Text = colorstring.Color("Searching in " + tui.PathColor + "'" + rootDir + "'[default] ...")
 	}
 
 	// Start the spinner
@@ -145,7 +145,7 @@ func checkDir(rootDir string, spinner *tea.Program) tea.Cmd {
 		} else {
 			utils.Trace(colorstring.Color("😕 [red]No git folder found"), false)
 		}
-		utils.Trace(colorstring.Color("🤔 Is [light_blue]"+rootDir+"[default] the correct path ?"), false)
+		utils.Trace(colorstring.Color("🤔 Is "+tui.PathColor+rootDir+"[default] the correct path ?"), false)
 	}
 
 	return tea.Quit
@@ -235,7 +235,7 @@ func chooseInteractiveOption() {
 		toUpdate := selectItems(gitFolders, func(folder entity.GitFolder) bool { return entity.CanPull(folder) })
 		utils.PrintSeparation()
 		if len(toUpdate) > 0 {
-			utils.Trace(colorstring.Color("[light_blue]Pulling repositories :[default]\n"), false)
+			utils.Trace(colorstring.Color(tui.TitleColor+"Pulling repositories :[default]\n"), false)
 		}
 		for _, folder := range toUpdate {
 			gitPull(folder)
@@ -319,7 +319,7 @@ func pickSingleItem(items []entity.GitFolder, fn filterFolder) string {
 
 func selectItems(items []entity.GitFolder, fn filterFolder) []entity.GitFolder {
 	utils.PrintSeparation()
-	var q = colorstring.Color("[light_blue]Pick repositories to update:[default]")
+	var q = colorstring.Color(tui.TitleColor + "Pick repositories to update:[default]")
 
 	var filteredItems []entity.GitFolder
 	for _, item := range items {
