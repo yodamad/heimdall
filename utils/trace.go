@@ -5,14 +5,15 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/yodamad/heimdall/commons"
 	"os"
+	"regexp"
 )
 
 func Trace(msg string, isDebug bool) {
 	if isDebug {
-		log.Debug(msg)
+		log.Debug(cleanForLog(msg))
 	} else {
 		println(msg)
-		log.Info(msg)
+		log.Info(cleanForLog(msg))
 	}
 }
 
@@ -20,7 +21,7 @@ func TraceWarn(msg string) {
 	if commons.Verbose {
 		println(colorstring.Color("[light_yellow]" + msg + "[default]"))
 	}
-	log.Warn(msg)
+	log.Warn(cleanForLog(msg))
 }
 
 func OverrideLogFile() {
@@ -29,4 +30,13 @@ func OverrideLogFile() {
 		f, _ := os.OpenFile(commons.LogDir+"/heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		log.SetOutput(f)
 	}
+}
+
+// Inspired from https://github.com/acarl005/stripansi/blob/master/stripansi.go
+const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
+
+var re = regexp.MustCompile(ansi)
+
+func cleanForLog(str string) string {
+	return re.ReplaceAllString(str, "")
 }
