@@ -3,6 +3,7 @@ package commons
 import (
 	"fmt"
 	"github.com/mitchellh/colorstring"
+	"os"
 )
 
 // ldflags vars
@@ -17,6 +18,15 @@ const DEFAULT_FOLDER = "."
 
 // MAX_DEPTH /* Depth of search */
 const MAX_DEPTH = 3
+
+// PUBLICKEY_PATH /* Path for public key for ssh authentication */
+var PUBLICKEY_PATH = os.Getenv("HOME") + "/.ssh/id_rsa"
+
+// SSHKEY_PASSWORD /* Default password for ssh authentication key opening */
+const SSHKEY_PASSWORD = ""
+
+// REMOTE_NAME /* Name of the remote URL */
+const REMOTE_NAME = "origin"
 
 // RootDir /* Which directory to start from */
 var RootDir string

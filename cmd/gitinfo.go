@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -350,12 +351,15 @@ func selectItems(items []entity.GitFolder, fn filterFolder) []entity.GitFolder {
 
 func gitFetch(repo *git.Repository) error {
 	fetchOptions := &git.FetchOptions{}
-	origin, _ := repo.Remote("origin")
-	if strings.Contains(origin.Config().URLs[0], "git@") {
+	remote, _ := repo.Remote(commons.REMOTE_NAME)
+	origin := remote.Config().URLs[0]
+	if strings.Contains(origin, "@") {
+		re := regexp.MustCompile(`\w+`)
+		user := re.FindStringSubmatch(origin)
+
 		var publicKey *ssh.PublicKeys
-		sshPath := os.Getenv("HOME") + "/.ssh/id_rsa"
-		sshKey, _ := os.ReadFile(sshPath)
-		publicKey, _ = ssh.NewPublicKeys("git", sshKey, "")
+		sshKey, _ := os.ReadFile(commons.PUBLICKEY_PATH)
+		publicKey, _ = ssh.NewPublicKeys(user[0], sshKey, commons.SSHKEY_PASSWORD)
 		fetchOptions.Auth = publicKey
 	}
 	return repo.Fetch(fetchOptions)
