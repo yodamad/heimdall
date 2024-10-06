@@ -37,6 +37,8 @@ func (m SpinnerModel) Update(msg2 tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	case PrintMessage:
 		m.Warns = append(m.Warns, colorstring.Color("[light_yellow]Cannot fetch "+msg2.(PrintMessage).Path+". Skip it...[default]"))
+	case ErrorMessage:
+		m.Warns = append(m.Warns, colorstring.Color("[red]Error "+msg2.(ErrorMessage).Error+"[default]"))
 	}
 	return m, nil
 }
@@ -52,6 +54,10 @@ func (m SpinnerModel) View() string {
 
 type PrintMessage struct {
 	Path string
+}
+
+type ErrorMessage struct {
+	Error string
 }
 
 func TheEndMessage() tea.Cmd {

@@ -5,6 +5,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -115,6 +116,9 @@ func checkDir(rootDir string, spinner *tea.Program) tea.Cmd {
 					return fs.SkipDir
 				} else if err != nil && foundGit {
 					spinner.Send(tui.PrintMessage{Path: path})
+					if commons.Verbose {
+						spinner.Send(tui.ErrorMessage{Error: err.Error()})
+					}
 					nbSkippedFolders++
 					return fs.SkipDir
 				}
@@ -172,8 +176,7 @@ func checkIfUpToDate(path string) (git.Status, error) {
 	if err != nil {
 		return nil, err
 	} else {
-		err := repo.Fetch(&git.FetchOptions{})
-
+		err = gitFetch(repo)
 		if err != nil && err.Error() != "already up-to-date" {
 			return nil, err
 		} else {
@@ -265,7 +268,10 @@ func chooseInteractiveOption() {
 
 func listLocalChanges(path string) {
 	repo, _ := git.PlainOpen(path)
-	repo.Fetch(&git.FetchOptions{})
+	err := gitFetch(repo)
+	if err != nil {
+		utils.TraceWarn("Impossible to fetch : " + err.Error())
+	}
 	w, _ := repo.Worktree()
 	s, _ := w.Status()
 
@@ -340,6 +346,19 @@ func selectItems(items []entity.GitFolder, fn filterFolder) []entity.GitFolder {
 		picked = append(picked, m.(tui.MenuModel).Selected[index])
 	}
 	return picked
+}
+
+func gitFetch(repo *git.Repository) error {
+	fetchOptions := &git.FetchOptions{}
+	origin, _ := repo.Remote("origin")
+	if strings.Contains(origin.Config().URLs[0], "git@") {
+		var publicKey *ssh.PublicKeys
+		sshPath := os.Getenv("HOME") + "/.ssh/id_rsa"
+		sshKey, _ := os.ReadFile(sshPath)
+		publicKey, _ = ssh.NewPublicKeys("git", sshKey, "")
+		fetchOptions.Auth = publicKey
+	}
+	return repo.Fetch(fetchOptions)
 }
 
 func gitPull(folder entity.GitFolder) {
