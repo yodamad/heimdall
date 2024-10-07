@@ -74,7 +74,7 @@ func listGitDirs() {
 		Spinner: s,
 	}
 
-	if rootDir == commons.DEFAULT_FOLDER {
+	if rootDir == commons.DefaultFolder {
 		m.Text = colorstring.Color("Searching in [bold]default directory[default] : " + tui.PathColor + "'" + rootDir + "'[default]")
 	} else {
 		m.Text = colorstring.Color("Searching in " + tui.PathColor + "'" + rootDir + "'[default] ...")

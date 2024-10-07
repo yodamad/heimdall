@@ -34,17 +34,17 @@ You can check, update, ... everything easily
 
 func init() {
 	rootCmd.AddCommand(cmd.GitInfo)
-	rootCmd.PersistentFlags().StringVarP(&commons.RootDir, "root-dir", "r", commons.DEFAULT_FOLDER, "root directory")
+	rootCmd.PersistentFlags().StringVarP(&commons.RootDir, "root-dir", "r", commons.DefaultFolder, "root directory")
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().BoolVarP(&commons.Interactive, "i", "i", false, "interactive mode")
-	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DEFAULT_FOLDER, "log directory")
+	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DefaultFolder, "log directory")
 
 	log.SetFormatter(&log.TextFormatter{
 		DisableLevelTruncation: true,
 	})
 	// Output to stdout instead of the default stderr
 	// Can be any io.Writer, see below for File example
-	f, _ := os.OpenFile("heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	f, _ := os.OpenFile(commons.DefaultFolder+"heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	log.SetOutput(f)
 
 	// Only log the warning severity or above.

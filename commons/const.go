@@ -13,8 +13,8 @@ var (
 	Date    = "unknown"
 )
 
-// DEFAULT_FOLDER /* Default folder for git-info search */
-const DEFAULT_FOLDER = "."
+// DefaultFolder /* Default folder for git-info search */
+var DefaultFolder = os.TempDir()
 
 // MAX_DEPTH /* Depth of search */
 const MAX_DEPTH = 3

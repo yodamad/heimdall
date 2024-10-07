@@ -25,10 +25,12 @@ func TraceWarn(msg string) {
 }
 
 func OverrideLogFile() {
-	if commons.LogDir != commons.DEFAULT_FOLDER {
+	if commons.LogDir != commons.DefaultFolder {
 		os.RemoveAll("heimdall.log")
 		f, _ := os.OpenFile(commons.LogDir+"/heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		log.SetOutput(f)
+	} else {
+		Trace(colorstring.Color("[light_yellow]Log file written in "+commons.DefaultFolder), false)
 	}
 }
 
