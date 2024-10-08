@@ -28,4 +28,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       -
         name: Publish to pkg.go.dev
-        run:  GOPROXY=proxy.golang.org go list -m github.com/yodamad/heimdall@${{ github.event.inputs.tag }}
+        run:  |
+          git checkout {{ github.event.inputs.tag }}
+          GOPROXY=proxy.golang.org go list -m github.com/yodamad/heimdall@${{ github.event.inputs.tag }}
