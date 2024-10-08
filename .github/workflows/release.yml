@@ -1,4 +1,4 @@
-name: release
+name: Release ${{ github.event.inputs.tag }}
 on:
   workflow_dispatch:
     inputs:
@@ -26,8 +26,14 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag }}
+      -
+        name: Set up Go for publishing
+        uses: actions/setup-go@v5
       -
         name: Publish to pkg.go.dev
         run:  |
-          git checkout {{ github.event.inputs.tag }}
           GOPROXY=proxy.golang.org go list -m github.com/yodamad/heimdall@${{ github.event.inputs.tag }}
