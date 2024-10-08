@@ -49,7 +49,7 @@ release:
   prerelease: auto
   make_latest: true
   replace_existing_draft: true
-  name_template: 'v{{ .Tag }}'
+  name_template: '{{ .Tag }}'
   header: |
 
   footer: |
