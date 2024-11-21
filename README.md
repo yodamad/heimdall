@@ -174,3 +174,24 @@ Interactive mode options:
 [ ] 🔃 Update one or several repositories (git pull)
 [X] ✅ I'm done
 ```
+
+### `-f`, `--config-file` : Input config file
+
+For some operations, some information are required. For instance, for some Git instances, an authentication token is needed.
+
+This file has to be a `yaml` formatted file.
+
+In this config file, you can configure these elements either in hardcoded value (bad for security) or reference an environment variable.
+The value pointing to an environment variable has to be prefixed by `env.`.
+
+```bash
+heimdall git-info -f /work/heimdall.yml
+```
+
+A sample file
+
+```yaml
+tokens:
+  gitlab.mycompany.com: MY_TOKEN # Bad !!
+  secured.mycompany.com: env.ENV_VAR_TOKEN
+```
