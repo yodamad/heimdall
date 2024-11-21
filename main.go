@@ -38,6 +38,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().BoolVarP(&commons.Interactive, "i", "i", false, "interactive mode")
 	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DefaultFolder, "log directory")
+	rootCmd.PersistentFlags().StringVarP(&commons.InputConfigFile, "config-file", "f", "", "config file")
 
 	log.SetFormatter(&log.TextFormatter{
 		DisableLevelTruncation: true,

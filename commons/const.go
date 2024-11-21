@@ -40,6 +40,12 @@ var Verbose bool
 // Interactive /* Interactive mode */
 var Interactive bool
 
+// InputConfigFile /* The config file to use */
+var InputConfigFile string
+
+// ENV_VARIABLE /* Prefix for env. variable in config file */
+const ENV_VARIABLE = "env."
+
 var HelpMessageTemplate = colorstring.Color(`            _               _       _ _ 
   /\  /\___(_)_ __ ___   __| | __ _| | |
  / /_/ / _ \ | '_ ` + "`" + ` _ \ / _` + "`" + ` |/ _` + "`" + ` | | |

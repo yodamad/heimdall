@@ -31,6 +31,7 @@ var GitInfo = &cobra.Command{
 	Short:   "List all directories containing a `.git` folder",
 	Run: func(cmd *cobra.Command, args []string) {
 		utils.OverrideLogFile()
+		utils.UseConfig()
 		utils.PrintBanner()
 		if commons.Verbose {
 			log.SetLevel(log.DebugLevel)
