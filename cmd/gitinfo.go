@@ -5,6 +5,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
@@ -14,6 +15,7 @@ import (
 	"github.com/yodamad/heimdall/utils"
 	"github.com/yodamad/heimdall/utils/tui"
 	"io/fs"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -96,7 +98,7 @@ func checkDir(rootDir string, spinner *tea.Program) tea.Cmd {
 	nbGitFolders := 0
 	nbSkippedFolders := 0
 
-	rootIsGit, err := checkIsGitDir(rootDir)
+	rootIsGit, err := checkIsGitDir(rootDir, spinner)
 	if err != nil && rootIsGit {
 		utils.Trace("Skip .git folder "+rootDir, false)
 		nbSkippedFolders++
@@ -112,7 +114,7 @@ func checkDir(rootDir string, spinner *tea.Program) tea.Cmd {
 				return fs.SkipDir
 			} else if d.IsDir() {
 				err = nil
-				foundGit, err := checkIsGitDir(path)
+				foundGit, err := checkIsGitDir(path, spinner)
 				if err == nil && foundGit {
 					nbGitFolders++
 					return fs.SkipDir
@@ -143,7 +145,7 @@ func checkDir(rootDir string, spinner *tea.Program) tea.Cmd {
 			utils.Trace(colorstring.Color("Found [green]"+strconv.Itoa(nbGitFolders)+"[default] folder(s)"), false)
 		}
 		if commons.Interactive {
-			chooseInteractiveOption()
+			chooseInteractiveOption(spinner)
 		}
 	} else {
 		if nbSkippedFolders > 0 {
@@ -157,12 +159,12 @@ func checkDir(rootDir string, spinner *tea.Program) tea.Cmd {
 	return tea.Quit
 }
 
-func checkIsGitDir(path string) (bool, error) {
+func checkIsGitDir(path string, spinner *tea.Program) (bool, error) {
 	utils.Trace("Inspecting "+path, true)
 	_, err := os.Stat(path + "/.git")
 	if err == nil {
 		utils.Trace("Found a .git folder : "+path, true)
-		_, err = checkIfUpToDate(path)
+		_, err = checkIfUpToDate(path, spinner)
 
 		if err != nil {
 			return true, err
@@ -173,12 +175,12 @@ func checkIsGitDir(path string) (bool, error) {
 	return false, err
 }
 
-func checkIfUpToDate(path string) (git.Status, error) {
+func checkIfUpToDate(path string, spinner *tea.Program) (git.Status, error) {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
 		return nil, err
 	} else {
-		err = gitFetch(repo)
+		err = gitFetch(repo, spinner)
 		if err != nil && err.Error() != "already up-to-date" {
 			return nil, err
 		} else {
@@ -204,7 +206,7 @@ func checkIfUpToDate(path string) (git.Status, error) {
 	}
 }
 
-func chooseInteractiveOption() {
+func chooseInteractiveOption(spinner *tea.Program) {
 	utils.PrintSeparation()
 
 	var choices = []string{}
@@ -231,7 +233,7 @@ func chooseInteractiveOption() {
 	case "📤 Display local changes of a repository":
 		folder := pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return folder.HasLocalChanges })
 		utils.PrintSeparation()
-		listLocalChanges(folder)
+		listLocalChanges(folder, spinner)
 	case "📥 Display remote commits of a repository":
 		utils.PrintSeparation()
 		folder := pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) })
@@ -245,7 +247,7 @@ func chooseInteractiveOption() {
 		for _, folder := range toUpdate {
 			gitPull(folder)
 		}
-		chooseInteractiveOption()
+		chooseInteractiveOption(spinner)
 	case "✅ I'm done":
 		os.Exit(0)
 	}
@@ -262,15 +264,15 @@ func chooseInteractiveOption() {
 
 	switch choice {
 	case "🔄 Check another folder":
-		chooseInteractiveOption()
+		chooseInteractiveOption(spinner)
 	case "✅ I'm done":
 		return
 	}
 }
 
-func listLocalChanges(path string) {
+func listLocalChanges(path string, spinner *tea.Program) {
 	repo, _ := git.PlainOpen(path)
-	err := gitFetch(repo)
+	err := gitFetch(repo, spinner)
 	if err != nil {
 		utils.TraceWarn("Impossible to fetch : " + err.Error())
 	}
@@ -350,7 +352,7 @@ func selectItems(items []entity.GitFolder, fn filterFolder) []entity.GitFolder {
 	return picked
 }
 
-func gitFetch(repo *git.Repository) error {
+func gitFetch(repo *git.Repository, spinner *tea.Program) error {
 	fetchOptions := &git.FetchOptions{}
 	remote, _ := repo.Remote(commons.REMOTE_NAME)
 	origin := remote.Config().URLs[0]
@@ -362,6 +364,14 @@ func gitFetch(repo *git.Repository) error {
 		sshKey, _ := os.ReadFile(commons.PUBLICKEY_PATH)
 		publicKey, _ = ssh.NewPublicKeys(user[0], sshKey, commons.SSHKEY_PASSWORD)
 		fetchOptions.Auth = publicKey
+	}
+	gitUrl, err := url.Parse(origin)
+	if err != nil {
+		log.Fatal(err)
+	}
+	hostname := strings.TrimPrefix(gitUrl.Hostname(), "www.")
+	if utils.GetToken(hostname, spinner) != "" {
+		fetchOptions.Auth = &http.BasicAuth{Password: utils.GetToken(hostname, spinner)}
 	}
 	return repo.Fetch(fetchOptions)
 }
