@@ -11,7 +11,11 @@ import (
 )
 
 func HasInputConfig() bool {
-	return commons.InputConfigFile != ""
+	_, err := os.Stat(commons.InputConfigFile)
+	if err != nil {
+		TraceWarn(colorstring.Color("Cannot read input config file : [red]"+commons.InputConfigFile) + "[light_yellow] Ignore it...")
+	}
+	return commons.InputConfigFile != "" && err == nil
 }
 
 func UseConfig() {
@@ -20,8 +24,7 @@ func UseConfig() {
 		viper.SetConfigType("yaml")
 		err := viper.ReadInConfig()
 		if err != nil {
-			TraceWarn(colorstring.Color("Cannot read input config file : [red] " + commons.InputConfigFile))
-			TraceWarn("Try run command without it")
+			TraceWarn(colorstring.Color("Cannot read config in file : [red]"+commons.InputConfigFile) + "[light_yellow] Ignore it...")
 		}
 	}
 }

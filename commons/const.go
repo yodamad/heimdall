@@ -17,6 +17,9 @@ var (
 var DefaultFolderFunc = func() string { home, _ := os.UserHomeDir(); return home + "/.heimdall/" }
 var DefaultFolder = DefaultFolderFunc()
 
+// DefaultConfigFile /* Default config file name */
+var DefaultConfigFile = "heimdall.yml"
+
 // MAX_DEPTH /* Depth of search */
 const MAX_DEPTH = 3
 
