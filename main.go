@@ -40,6 +40,16 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DefaultFolder, "log directory")
 	rootCmd.PersistentFlags().StringVarP(&commons.InputConfigFile, "config-file", "f", "", "config file")
 
+	// Init .heimdall folder
+	_, err := os.Stat(commons.DefaultFolder)
+	if os.IsNotExist(err) {
+		err := os.Mkdir(commons.DefaultFolder, os.ModePerm)
+		if err != nil {
+			fmt.Errorf("Cannot create dir " + err.Error())
+			commons.DefaultFolder = os.TempDir()
+		}
+	}
+
 	log.SetFormatter(&log.TextFormatter{
 		DisableLevelTruncation: true,
 	})

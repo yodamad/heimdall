@@ -14,7 +14,8 @@ var (
 )
 
 // DefaultFolder /* Default folder for git-info search */
-var DefaultFolder = os.TempDir()
+var DefaultFolderFunc = func() string { home, _ := os.UserHomeDir(); return home + "/.heimdall/" }
+var DefaultFolder = DefaultFolderFunc()
 
 // MAX_DEPTH /* Depth of search */
 const MAX_DEPTH = 3
