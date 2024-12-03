@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/yodamad/heimdall/commons"
@@ -12,14 +13,14 @@ func Trace(msg string, isDebug bool) {
 	if isDebug {
 		log.Debug(cleanForLog(msg))
 	} else {
-		println(msg)
+		fmt.Println(msg)
 		log.Info(cleanForLog(msg))
 	}
 }
 
 func TraceWarn(msg string) {
 	if commons.Verbose {
-		println(colorstring.Color("[light_yellow]" + msg + "[default]"))
+		fmt.Println(colorstring.Color("[light_yellow]" + msg + "[default]"))
 	}
 	log.Warn(cleanForLog(msg))
 }
