@@ -45,7 +45,7 @@ var Verbose bool
 var Interactive bool
 
 // InputConfigFile /* The config file to use */
-var InputConfigFile string
+var InputConfigFile = DefaultFolder + DefaultConfigFile
 
 // ENV_VARIABLE /* Prefix for env. variable in config file */
 const ENV_VARIABLE = "env."
