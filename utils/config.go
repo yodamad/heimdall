@@ -26,6 +26,12 @@ func UseConfig() {
 		if err != nil {
 			TraceWarn(colorstring.Color("Cannot read config in file : [red]"+commons.InputConfigFile) + "[light_yellow] Ignore it...")
 		}
+		workDir := viper.GetString("work_dir")
+		if info, err := os.Stat(workDir); err != nil || !info.IsDir() {
+			TraceWarn(colorstring.Color("The work_dir is not a valid directory: [red]" + workDir))
+		} else {
+			commons.DefaultWorkDir = workDir
+		}
 	}
 }
 

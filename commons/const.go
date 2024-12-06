@@ -13,12 +13,18 @@ var (
 	Date    = "unknown"
 )
 
-// DefaultFolder /* Default folder for git-info search */
 var DefaultFolderFunc = func() string { home, _ := os.UserHomeDir(); return home + "/.heimdall/" }
+
+// DefaultFolder /* Default folder for git-info search */
 var DefaultFolder = DefaultFolderFunc()
 
 // DefaultConfigFile /* Default config file name */
 var DefaultConfigFile = "heimdall.yml"
+
+var DefaultWorkDirFunc = func() string { home, _ := os.UserHomeDir(); return home }
+
+// DefaultWorkDir /* Default work folder */
+var DefaultWorkDir = DefaultWorkDirFunc()
 
 // MAX_DEPTH /* Depth of search */
 const MAX_DEPTH = 3
