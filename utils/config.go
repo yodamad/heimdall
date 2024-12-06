@@ -33,6 +33,9 @@ func UseConfig() {
 			commons.DefaultWorkDir = workDir
 		}
 	}
+	if !strings.HasSuffix(commons.DefaultWorkDir, "/") {
+		commons.DefaultWorkDir += "/"
+	}
 }
 
 func GetToken(host string, spinner *tea.Program) string {
