@@ -35,6 +35,7 @@ You can check, update, ... everything easily
 func init() {
 	utils.UseConfig()
 	rootCmd.AddCommand(cmd.GitInfo)
+	rootCmd.AddCommand(cmd.GitClone)
 	rootCmd.PersistentFlags().StringVarP(&commons.RootDir, "root-dir", "r", commons.DefaultWorkDir, "root directory")
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().BoolVarP(&commons.Interactive, "i", "i", false, "interactive mode")
