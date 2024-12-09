@@ -10,9 +10,10 @@ import (
 	"github.com/yodamad/heimdall/utils"
 	"net/url"
 	"os"
+	"regexp"
 )
 
-var hostname bool
+var hostname, keepSuffix bool
 var cloneDir string
 
 var GitClone = &cobra.Command{
@@ -35,14 +36,18 @@ var GitClone = &cobra.Command{
 		if commons.Verbose {
 			log.SetLevel(log.DebugLevel)
 		}
+		if keepSuffix && !hostname {
+			utils.TraceWarn(colorstring.Color("[bold]keep-suffix[reset][light_yellow] option is ignored because [bold]host[reset][light_yellow] option is not enabled"))
+		}
 		cloneRepo(args[0])
 	},
 }
 
 func init() {
 	utils.UseConfig()
-	GitClone.Flags().BoolVarP(&hostname, "host", "o", false, "Include hostname in path created ?")
+	GitClone.Flags().BoolVarP(&hostname, "host", "p", false, "Include hostname prefix in path created ?")
 	GitClone.Flags().StringVarP(&cloneDir, "clone-dir", "c", commons.DefaultWorkDir, "Folder in which clone the repo, by default in configured workdir")
+	GitClone.Flags().BoolVarP(&keepSuffix, "keep-hostname-suffix", "k", false, "Include hostname suffix (.com, .fr,...) in path created ?")
 }
 
 func cloneRepo(inputUrl string) {
@@ -53,6 +58,10 @@ func cloneRepo(inputUrl string) {
 	pathToRepo := parsedUrl.Path
 
 	if hostname {
+		if !keepSuffix {
+			re := regexp.MustCompile(`\.[a-zA-Z]+$`)
+			hostnameOfRepo = re.ReplaceAllString(hostnameOfRepo, "")
+		}
 		clone(inputUrl, cloneDir+hostnameOfRepo+pathToRepo)
 	} else {
 		clone(inputUrl, cloneDir+pathToRepo)
