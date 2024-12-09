@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 )
 
 var hostname, keepSuffix bool
@@ -38,6 +39,9 @@ var GitClone = &cobra.Command{
 		}
 		if keepSuffix && !hostname {
 			utils.TraceWarn(colorstring.Color("[bold]keep-suffix[reset][light_yellow] option is ignored because [bold]host[reset][light_yellow] option is not enabled"))
+		}
+		if !strings.HasSuffix(cloneDir, "/") {
+			cloneDir += "/"
 		}
 		cloneRepo(args[0])
 	},
@@ -69,12 +73,13 @@ func cloneRepo(inputUrl string) {
 }
 
 func clone(inputUrl string, path string) {
+	path = strings.ReplaceAll(path, "//", "/")
 	utils.Trace("Create directory "+path, false)
-	err := os.MkdirAll(cloneDir+path, os.ModePerm)
+	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
 		utils.TraceWarn("Cannot create path : [light_blue] " + err.Error())
 	}
-	_, err = git.PlainClone(cloneDir+path, false, &git.CloneOptions{
+	_, err = git.PlainClone(path, false, &git.CloneOptions{
 		URL:      inputUrl + ".git",
 		Progress: os.Stderr,
 	})
