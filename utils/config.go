@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mitchellh/colorstring"
 	"github.com/spf13/viper"
@@ -24,13 +25,15 @@ func UseConfig() {
 		viper.SetConfigType("yaml")
 		err := viper.ReadInConfig()
 		if err != nil {
-			TraceWarn(colorstring.Color("Cannot read config in file : [red]"+commons.InputConfigFile) + "[light_yellow] Ignore it...")
+			fmt.Println(colorstring.Color("[light_yellow]Cannot read config in file : [red]"+commons.InputConfigFile) + "[light_yellow] Ignore it...")
 		}
 		workDir := viper.GetString("work_dir")
-		if info, err := os.Stat(workDir); err != nil || !info.IsDir() {
-			TraceWarn(colorstring.Color("The work_dir is not a valid directory: [red]" + workDir))
-		} else {
-			commons.DefaultWorkDir = workDir
+		if workDir != "" {
+			if info, err := os.Stat(workDir); err != nil || !info.IsDir() {
+				fmt.Println(colorstring.Color("[light_yellow]The work_dir is not a valid directory: [red]" + workDir))
+			} else {
+				commons.DefaultWorkDir = workDir
+			}
 		}
 	}
 	if !strings.HasSuffix(commons.DefaultWorkDir, "/") {

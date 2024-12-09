@@ -85,6 +85,5 @@ func clone(inputUrl string, path string) {
 	})
 	if err != nil {
 		utils.TraceWarn("Git clone failed: [light_blue] " + err.Error())
-		fmt.Println(colorstring.Color("[yellow]Git clone failed: [red] " + err.Error()))
 	}
 }

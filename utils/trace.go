@@ -10,7 +10,7 @@ import (
 )
 
 func Trace(msg string, isDebug bool) {
-	if isDebug {
+	if isDebug && commons.Verbose {
 		log.Debug(cleanForLog(msg))
 	} else {
 		fmt.Println(msg)
@@ -19,10 +19,8 @@ func Trace(msg string, isDebug bool) {
 }
 
 func TraceWarn(msg string) {
-	if commons.Verbose {
-		fmt.Println(colorstring.Color("[light_yellow]" + msg + "[default]"))
-	}
-	log.Warn(cleanForLog(msg))
+	fmt.Println(colorstring.Color("[light_yellow]" + msg + "[default]"))
+	log.Info(cleanForLog(msg))
 }
 
 func OverrideLogFile() {
@@ -31,7 +29,7 @@ func OverrideLogFile() {
 		f, _ := os.OpenFile(commons.LogDir+"/heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		log.SetOutput(f)
 	} else {
-		Trace(colorstring.Color("[light_yellow]Log file written in "+commons.DefaultFolder), false)
+		Trace(colorstring.Color("[light_blue]Log file written in "+commons.DefaultFolder), false)
 	}
 }
 
