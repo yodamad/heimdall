@@ -28,17 +28,19 @@ func UseConfig() {
 		if err != nil {
 			fmt.Println(colorstring.Color("[light_yellow]Cannot read config in file : [red]"+commons.InputConfigFile) + "[light_yellow] Ignore it...")
 		}
-		workDir := viper.GetString("work_dir")
-		if workDir != "" {
-			if info, err := os.Stat(workDir); err != nil || !info.IsDir() {
-				fmt.Println(colorstring.Color("[light_yellow]The work_dir is not a valid directory: [red]" + workDir))
-			} else {
-				commons.WorkDir = workDir
+		if commons.WorkDir == commons.DefaultWorkDir {
+			workDir := viper.GetString("work_dir")
+			if workDir != "" {
+				if info, err := os.Stat(workDir); err != nil || !info.IsDir() {
+					fmt.Println(colorstring.Color("[light_yellow]The work_dir is not a valid directory: [red]" + workDir))
+				} else {
+					commons.WorkDir = workDir
+				}
 			}
 		}
 	}
-	if !strings.HasSuffix(commons.DefaultWorkDir, "/") {
-		commons.DefaultWorkDir += "/"
+	if !strings.HasSuffix(commons.WorkDir, "/") {
+		commons.WorkDir += "/"
 	}
 }
 

@@ -48,7 +48,7 @@ var GitClone = &cobra.Command{
 }
 
 func init() {
-	GitClone.Flags().BoolVarP(&hostname, "with-hostname", "w", false, "Include hostname in path created ?")
+	GitClone.Flags().BoolVarP(&hostname, "include-hostname", "i", false, "Include hostname in path created ?")
 	GitClone.Flags().BoolVarP(&keepSuffix, "keep-hostname-suffix", "k", false, "Include hostname suffix (.com, .fr,...) in path created ?")
 }
 
