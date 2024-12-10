@@ -38,7 +38,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DefaultFolder, "log directory")
 	rootCmd.PersistentFlags().StringVarP(&commons.WorkDir, "work-dir", "w", commons.DefaultWorkDir, "work directory")
-	rootCmd.PersistentFlags().StringVarP(&commons.InputConfigFile, "config-file", "f", commons.InputConfigFile, "config file")
+	rootCmd.PersistentFlags().StringVarP(&commons.InputConfigFile, "config-file", "c", commons.InputConfigFile, "config file")
 
 	// Init .heimdall folder
 	_, err := os.Stat(commons.DefaultFolder)
