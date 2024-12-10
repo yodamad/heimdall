@@ -38,8 +38,8 @@ const SSHKEY_PASSWORD = ""
 // REMOTE_NAME /* Name of the remote URL */
 const REMOTE_NAME = "origin"
 
-// RootDir /* Which directory to start from */
-var RootDir string
+// WorkDir /* Which directory to start from */
+var WorkDir string
 
 // LogDir /* Which directory to log in */
 var LogDir string

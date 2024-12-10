@@ -35,10 +35,9 @@ You can check, update, ... everything easily
 func init() {
 	rootCmd.AddCommand(cmd.GitInfo)
 	rootCmd.AddCommand(cmd.GitClone)
-	rootCmd.PersistentFlags().StringVarP(&commons.RootDir, "root-dir", "r", commons.DefaultWorkDir, "root directory")
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
-	rootCmd.PersistentFlags().BoolVarP(&commons.Interactive, "i", "i", false, "interactive mode")
 	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DefaultFolder, "log directory")
+	rootCmd.PersistentFlags().StringVarP(&commons.WorkDir, "work-dir", "w", commons.DefaultWorkDir, "work directory")
 	rootCmd.PersistentFlags().StringVarP(&commons.InputConfigFile, "config-file", "f", commons.InputConfigFile, "config file")
 
 	// Init .heimdall folder

@@ -32,6 +32,7 @@ var GitInfo = &cobra.Command{
 	Aliases: []string{"gi"},
 	Short:   "List all directories containing a `.git` folder",
 	Run: func(cmd *cobra.Command, args []string) {
+		utils.UseConfig()
 		utils.OverrideLogFile()
 		utils.PrintBanner()
 		if commons.Verbose {
@@ -43,10 +44,11 @@ var GitInfo = &cobra.Command{
 
 func init() {
 	GitInfo.Flags().IntVarP(&searchDepth, "depth", "d", commons.MAX_DEPTH, "search depth")
+	GitInfo.Flags().BoolVarP(&commons.Interactive, "interactive-mode", "i", false, "interactive mode")
 }
 
 func listGitDirs() {
-	rootDir := commons.RootDir
+	rootDir := commons.WorkDir
 	interactiveMode := commons.Interactive
 	answer := "n"
 

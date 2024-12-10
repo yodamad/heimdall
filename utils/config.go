@@ -14,7 +14,8 @@ import (
 func HasInputConfig() bool {
 	_, err := os.Stat(commons.InputConfigFile)
 	if err != nil {
-		TraceWarn(colorstring.Color("Cannot read input config file : [red]"+commons.InputConfigFile) + "[light_yellow] Ignore it...")
+		fmt.Println(colorstring.Color("[light_yellow]Cannot read input config file : [red]" + commons.InputConfigFile + "[light_yellow] Ignore it..."))
+		fmt.Println("")
 	}
 	return commons.InputConfigFile != "" && err == nil
 }
@@ -32,7 +33,7 @@ func UseConfig() {
 			if info, err := os.Stat(workDir); err != nil || !info.IsDir() {
 				fmt.Println(colorstring.Color("[light_yellow]The work_dir is not a valid directory: [red]" + workDir))
 			} else {
-				commons.DefaultWorkDir = workDir
+				commons.WorkDir = workDir
 			}
 		}
 	}

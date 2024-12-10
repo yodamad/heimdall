@@ -15,7 +15,6 @@ import (
 )
 
 var hostname, keepSuffix bool
-var cloneDir string
 
 var GitClone = &cobra.Command{
 	Use:     "git-clone",
@@ -32,6 +31,7 @@ var GitClone = &cobra.Command{
 	},
 	Short: "Git clone given repository to a folder based on the path of the repo",
 	Run: func(cmd *cobra.Command, args []string) {
+		utils.UseConfig()
 		utils.OverrideLogFile()
 		utils.PrintBanner()
 		if commons.Verbose {
@@ -40,17 +40,15 @@ var GitClone = &cobra.Command{
 		if keepSuffix && !hostname {
 			utils.TraceWarn(colorstring.Color("[bold]keep-suffix[reset][light_yellow] option is ignored because [bold]host[reset][light_yellow] option is not enabled"))
 		}
-		if !strings.HasSuffix(cloneDir, "/") {
-			cloneDir += "/"
+		if !strings.HasSuffix(commons.WorkDir, "/") {
+			commons.WorkDir += "/"
 		}
 		cloneRepo(args[0])
 	},
 }
 
 func init() {
-	utils.UseConfig()
-	GitClone.Flags().BoolVarP(&hostname, "host", "p", false, "Include hostname prefix in path created ?")
-	GitClone.Flags().StringVarP(&cloneDir, "clone-dir", "c", commons.DefaultWorkDir, "Folder in which clone the repo, by default in configured workdir")
+	GitClone.Flags().BoolVarP(&hostname, "with-hostname", "w", false, "Include hostname in path created ?")
 	GitClone.Flags().BoolVarP(&keepSuffix, "keep-hostname-suffix", "k", false, "Include hostname suffix (.com, .fr,...) in path created ?")
 }
 
@@ -66,9 +64,9 @@ func cloneRepo(inputUrl string) {
 			re := regexp.MustCompile(`\.[a-zA-Z]+$`)
 			hostnameOfRepo = re.ReplaceAllString(hostnameOfRepo, "")
 		}
-		clone(inputUrl, cloneDir+hostnameOfRepo+pathToRepo)
+		clone(inputUrl, commons.WorkDir+hostnameOfRepo+pathToRepo)
 	} else {
-		clone(inputUrl, cloneDir+pathToRepo)
+		clone(inputUrl, commons.WorkDir+pathToRepo)
 	}
 }
 
