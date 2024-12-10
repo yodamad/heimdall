@@ -1,2 +1,4 @@
-* [🏡 Homepage](docs/index.md)
-* [ℹ️ Git-info](docs/git-info.md)
+* [🏡 Homepage](index.md)
+* [🚩 Global flags](flags.md)
+* [ℹ️ Git-info](git-info.md)
+* [📩 Git-clone](git-clone.md)

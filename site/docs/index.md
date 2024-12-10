@@ -1,17 +1,26 @@
-# Welcome to MkDocs
+# Welcome to Heimdall
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+A CLI to help with your git directories (for now 😉).
 
-## Commands
+Based on the myth of the Nordic God, [Heimdall](https://en.wikipedia.org/wiki/Heimdall), the CLI is here to ease with your multiple Git repositories.
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+A quick demo of the interactive mode.
 
-## Project layout
+![Simple demo](./assets/demo.gif)
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+## How to install
+
+__*On MacOS:*__
+
+Heimdall is available through `brew`
+
+```bash
+brew tap yodamad/tools
+brew install heimdall
+```
+
+__*On Linux:*__ ⚠️ Use it at your own risk *for now* ⚠️
+
+There are available on [Release page](https://github.com/yodamad/heimdall/releases) but not well tested to be honest
+
+__*On Windows:*__ ❌ Not available for now, some compatibilities problems.

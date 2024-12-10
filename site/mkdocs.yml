@@ -1,1 +1,44 @@
-site_name: My Docs
+site_name: Heimdall
+copyright: '@2024 yodamad'
+site_author: Mat V. (@yodamad03)
+site_url: https://yodamad.github.io/heimdall/
+site_description: About Heimdall CLI
+
+repo_name: heimdall
+repo_url: https://github.com/yodamad/heimdall
+
+markdown_extensions:
+  # for nice icons
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      # admonitions extension
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+
+# All plugins
+plugins:
+  - search
+  # Move navigation to a dedicated summary file
+  - literate-nav:
+      nav_file: summary.md
+
+# Theme info
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - scheme: slate
+      primary: purple
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+    # Palette toggle for dark mode
+    - scheme: default
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
