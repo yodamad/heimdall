@@ -1,4 +1,8 @@
 * [🏡 Homepage](index.md)
 * [🚩 Global flags](flags.md)
 * [ℹ️ Git-info](git-info.md)
+    * [🤿 Search depth](git-info/#search-depth-depth-or-d)
+    * [🎮 Interactive mode](git-info/#interactive-mode-interactive-mode-or-i)
 * [📩 Git-clone](git-clone.md)
+    * [🏠Include hostname](git-clone/#include-hostname-include-hostname-or-i)
+    * [🎬Include suffix](git-clone/#keep-hostname-suffix-keep-hostname-suffix-or-k)

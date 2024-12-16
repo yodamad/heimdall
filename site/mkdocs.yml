@@ -23,6 +23,8 @@ markdown_extensions:
 # All plugins
 plugins:
   - search
+  # Make section displayable in nav
+  - section-index
   # Move navigation to a dedicated summary file
   - literate-nav:
       nav_file: summary.md
@@ -42,6 +44,9 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Switch to dark mode
+  features:
+    # Sections opened by default
+    - navigation.expand
 
 extra_css:
   - assets/style.css
