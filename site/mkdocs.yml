@@ -42,3 +42,6 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Switch to dark mode
+
+extra_css:
+  - assets/style.css
