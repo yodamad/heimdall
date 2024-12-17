@@ -8,7 +8,7 @@ import (
 
 // ldflags vars
 var (
-	Version = colorstring.Color("[red]dev[default]")
+	Version = colorstring.Color("[red]demo[default]")
 	Commit  = "none"
 	Date    = "unknown"
 )
@@ -91,5 +91,4 @@ Additional Commands:{{range $cmds}}{{if (and (eq .GroupID "") (or .IsAvailableCo
 Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
   {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
 
-Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
-	`)
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}`)
