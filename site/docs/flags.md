@@ -4,40 +4,7 @@ Heimdall provides global flags available for all commands.
 
 You can display options with `-h` option
 
-```bash
-heimdall -h
-```
-
-!!!example
-    ```bash
-                _               _       _ _
-      /\  /\___(_)_ __ ___   __| | __ _| | |
-     / /_/ / _ \ | '_ ` _ \ / _` |/ _` | | |
-    / __  /  __/ | | | | | | (_| | (_| | | |
-    \/ /_/ \___|_|_| |_| |_|\__,_|\__,_|_|_|
-    
-    Version dev
-    
-    Usage:
-    heimdall [flags]
-    heimdall [command]
-    
-    Examples:
-    heimdall -h
-    
-    Available Commands:
-    completion  Generate the autocompletion script for the specified shell
-    git-clone   Git clone given repository to a folder based on the path of the repo
-    git-info    List all directories containing a `.git` folder
-    help        Help about any command
-    
-    Flags:
-    -c, --config-file string   config file (default "/Users/yodamad/.heimdall/heimdall.yml")
-    -h, --help                 help for heimdall
-    -l, --log-dir string       log directory (default "/Users/yodamad/.heimdall/")
-    -v, --verbose              verbose output
-    -w, --work-dir string      work directory (default "/Users/yodamad")
-    ```
+![Simple demo](./assets/heimdall-demo.gif)
 
 ## Config file : `--config-file` or `-f`
 
@@ -62,6 +29,10 @@ heimdall git-info -f /work/heimdall.yml
 
 ## Log directory : `--log-dir` or `-l`
 
+By default, Heimdall will write its logs into a file call `heimdall.log` in the default directory.
+
+You can override this value with this flag to specify the path of your log file locally.
+
 ## Work directory : `--work-dir` or `-w`
 
 By default, Heimdall will run in the home directory. You can override this directory in the [configuration-file](#config-file-config-file-or-f).
@@ -69,3 +40,5 @@ By default, Heimdall will run in the home directory. You can override this direc
 But you can also define it at run time with this option. It will override the potential value existing in the configuration file.
 
 ## Verbose mode : `--verbose` or `-v`
+
+By enabling this option, more logs are traced within the log file and in the console output. This helps to debug if you face some problems running Heimdall.

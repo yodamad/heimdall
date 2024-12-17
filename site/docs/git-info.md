@@ -5,55 +5,19 @@ The command do a local and a remote checks.
 
 Some options are available and described in this page. But there are also [global flags](flags.md) available.
 
-!!!example
-    ```shell
-      /\  /\___(_)_ __ ___   __| | __ _| | |
-     / /_/ / _ \ | '_ ` _ \ / _` |/ _` | | |
-    / __  /  __/ | | | | | | (_| | (_| | | |
-    \/ /_/ \___|_|_| |_| |_|\__,_|\__,_|_|_|
-    
-    Version dev
-    
-    Usage:
-    heimdall git-info [flags]
-    
-        Aliases:
-    git-info, gi
-    
-    Flags:
-    -d, --depth int          search depth (default 3)
-    -h, --help               help for git-info
-    -i, --interactive-mode   interactive mode
-    
-    Global Flags:
-    ...
-    ```
+![Simple demo](./assets/heimdall-git-info-demo.gif)
 
-## Search depth: `--depth` or `-d`
+## Available options
+
+![Options](./assets/heimdall-git-info.gif)
+
+### Search depth: `--depth` or `-d`
 
 By default, it searches no more then 3 levels of subdirectories, you can override this with the `-d` flag.
 
-```bash
-heimdall git-info -r /home/user/work/ -d 1
-```
+![Simple demo](./assets/heimdall-git-info-demo-d.gif)
 
-!!!example "Sample output"
-    ```shell
-    Searching in /home/user/work/...
-    +---------------------------------------+--------+---------------+----------------+
-    | PATH                                  | BRANCH | LOCAL_CHANGES | REMOTE_CHANGES |
-    +---------------------------------------+--------+---------------+----------------+
-    | /home/user/work/project1              |  main  |       🔴      |      🔴(1)     |
-    +---------------------------------------+--------+---------------+----------------+
-    | /home/user/work/project2              |  main  |       🔴      |       🟢       |
-    +---------------------------------------+--------+---------------+----------------+
-    | /home/user/work/project3              | master |       🟢      |       🟢       |
-    +---------------------------------------+--------+---------------+----------------+
-    | /home/user/work/project4              |  main  |       🔴      |       🟢       |
-    +---------------------------------------+--------+---------------+----------------+
-    ```
-
-## Interactive mode: `--interactive-mode` or `-i`
+### Interactive mode: `--interactive-mode` or `-i`
 
 With interactive mode, you can easily:
 * Pick the folder you want to inspect
