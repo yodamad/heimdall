@@ -64,7 +64,7 @@ func PrintTable(gitFolders []entity.GitFolder) {
 
 func visualDisplayRepo(repo string) string {
 	cleanRootDir := strings.TrimPrefix(commons.WorkDir, "./")
-	coloredRepo := strings.Replace(repo, cleanRootDir, colorstring.Color("[light_gray]"+cleanRootDir+"[default]"), -1)
+	coloredRepo := strings.Replace(repo, cleanRootDir, colorstring.Color("[dark_gray]"+cleanRootDir+"[default]"), -1)
 	return coloredRepo
 }
 
