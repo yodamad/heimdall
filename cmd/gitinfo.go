@@ -100,6 +100,9 @@ func listGitDirs() {
 
 func checkDir(rootDir string, spinner *tea.Program) tea.Cmd {
 	nbIgnoreSlashes := strings.Count(rootDir, "/")
+	if strings.HasPrefix(rootDir, "./") {
+		nbIgnoreSlashes--
+	}
 	nbGitFolders := 0
 	nbSkippedFolders := 0
 
@@ -109,7 +112,7 @@ func checkDir(rootDir string, spinner *tea.Program) tea.Cmd {
 		nbSkippedFolders++
 	}
 	if !rootIsGit {
-		filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
+		filepath.WalkDir(strings.TrimPrefix(rootDir, "./"), func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				// handle possible path err, just in case...
 				return err

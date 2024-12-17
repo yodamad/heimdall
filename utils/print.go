@@ -41,7 +41,7 @@ func PrintTable(gitFolders []entity.GitFolder) {
 	t.AppendHeader(table.Row{"Path", "Branch", "Local_Changes", "Remote_Changes"})
 	for _, gf := range gitFolders {
 		t.AppendRows([]table.Row{
-			{gf.Path, gf.CurrentBranch, visualDisplayBool(gf.HasLocalChanges), displayRemoteChanges(gf.RemoteChanges)},
+			{visualDisplayRepo(gf.Path), gf.CurrentBranch, visualDisplayBool(gf.HasLocalChanges), displayRemoteChanges(gf.RemoteChanges)},
 		})
 		t.AppendSeparator()
 	}
@@ -60,6 +60,12 @@ func PrintTable(gitFolders []entity.GitFolder) {
 		},
 	})
 	t.Render()
+}
+
+func visualDisplayRepo(repo string) string {
+	cleanRootDir := strings.TrimPrefix(commons.WorkDir, "./")
+	coloredRepo := strings.Replace(repo, cleanRootDir, colorstring.Color("[light_gray]"+cleanRootDir+"[default]"), -1)
+	return coloredRepo
 }
 
 func visualDisplayBool(status bool) string {

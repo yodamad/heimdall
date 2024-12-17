@@ -10,7 +10,10 @@ import (
 )
 
 func Trace(msg string, isDebug bool) {
-	if isDebug && commons.Verbose {
+	if isDebug {
+		if commons.Verbose {
+			fmt.Println(msg)
+		}
 		log.Debug(cleanForLog(msg))
 	} else {
 		fmt.Println(msg)
