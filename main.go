@@ -33,6 +33,11 @@ You can check, update, ... everything easily
 }
 
 func init() {
+
+	commons.Version = version
+	commons.Commit = commit
+	commons.Date = date
+
 	rootCmd.AddCommand(cmd.GitInfo)
 	rootCmd.AddCommand(cmd.GitClone)
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
@@ -61,10 +66,6 @@ func init() {
 	// Only log the warning severity or above.
 	log.SetLevel(log.InfoLevel)
 	rootCmd.SetHelpTemplate(commons.HelpMessageTemplate)
-
-	commons.Version = version
-	commons.Commit = commit
-	commons.Date = date
 }
 
 func Execute() {

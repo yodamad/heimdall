@@ -8,7 +8,7 @@ import (
 
 // ldflags vars
 var (
-	Version = "dev"
+	Version = colorstring.Color("[red]dev[default]")
 	Commit  = "none"
 	Date    = "unknown"
 )
@@ -56,18 +56,18 @@ var InputConfigFile = DefaultFolder + DefaultConfigFile
 // ENV_VARIABLE /* Prefix for env. variable in config file */
 const ENV_VARIABLE = "env."
 
-var HelpMessageTemplate = colorstring.Color(`            _               _       _ _ 
+var HelpMessageTemplate = colorstring.Color(`[light_blue]            _               _       _ _ 
   /\  /\___(_)_ __ ___   __| | __ _| | |
- / /_/ / _ \ | '_ ` + "`" + ` _ \ / _` + "`" + ` |/ _` + "`" + ` | | |
+ / /_/ / _ \ | '_ `+"`"+` _ \ / _`+"`"+` |/ _`+"`"+` | | |
 / __  /  __/ | | | | | | (_| | (_| | | |
 \/ /_/ \___|_|_| |_| |_|\__,_|\__,_|_|_|
 
-` + fmt.Sprintf(colorstring.Color("Version [bold][light_gray]%s[reset]\n"), Version) + `
+[default]`) + fmt.Sprintf(colorstring.Color("Version [bold][light_gray]%s[reset]\n"), Version) + colorstring.Color(`
 [bold]Usage[reset]:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
 
-[bold]	Aliases[reset]:
+[bold]Aliases[reset]:
   {{.NameAndAliases}}{{end}}{{if .HasExample}}
 
 [bold]Examples[reset]:
