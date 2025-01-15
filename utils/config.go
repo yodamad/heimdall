@@ -11,6 +11,13 @@ import (
 	"strings"
 )
 
+type Platform struct {
+	typeOf string
+	token  string
+}
+
+var ConfiguredPlatforms = make(map[string]Platform)
+
 func HasInputConfig() bool {
 	_, err := os.Stat(commons.InputConfigFile)
 	if err != nil {
@@ -25,6 +32,7 @@ func UseConfig() {
 		viper.SetConfigFile(commons.InputConfigFile)
 		viper.SetConfigType("yaml")
 		err := viper.ReadInConfig()
+		BuildPlatform()
 		if err != nil {
 			fmt.Println(colorstring.Color("[light_yellow]Cannot read config in file : [red]"+commons.InputConfigFile) + "[light_yellow] Ignore it...")
 		}
@@ -44,19 +52,38 @@ func UseConfig() {
 	}
 }
 
-func GetToken(host string, spinner *tea.Program) string {
-	rawValue := viper.GetString("tokens." + host)
-	if strings.HasPrefix(rawValue, commons.ENV_VARIABLE) {
-		envValue := os.Getenv(strings.TrimPrefix(rawValue, commons.ENV_VARIABLE))
-		if envValue == "" {
-			TraceWarn(strings.TrimPrefix(rawValue, commons.ENV_VARIABLE) + " referenced in config-file is not set")
-			if spinner != nil {
-				spinner.Send(tui.ErrorMessage{Error: strings.TrimPrefix(rawValue, commons.ENV_VARIABLE) + " referenced in config-file is not set"})
-			}
-			return ""
+func BuildPlatform() {
+	platforms := viper.GetStringMap("platforms")
+
+	// Iterating over the map
+	for key := range platforms {
+		infos := viper.GetStringMap("platforms." + key)
+		platform := Platform{
+			typeOf: infos["type"].(string),
+			token:  infos["token"].(string),
 		}
-		return envValue
+		ConfiguredPlatforms[key] = platform
+	}
+}
+
+func GetToken(host string, spinner *tea.Program) string {
+	if platform, isPresent := ConfiguredPlatforms[host]; isPresent {
+		rawValue := platform.token
+		if strings.HasPrefix(rawValue, commons.ENV_VARIABLE) {
+			envValue := os.Getenv(strings.TrimPrefix(rawValue, commons.ENV_VARIABLE))
+			if envValue == "" {
+				TraceWarn(strings.TrimPrefix(rawValue, commons.ENV_VARIABLE) + " referenced in config-file is not set")
+				if spinner != nil {
+					spinner.Send(tui.ErrorMessage{Error: strings.TrimPrefix(rawValue, commons.ENV_VARIABLE) + " referenced in config-file is not set"})
+				}
+				return ""
+			}
+			return envValue
+		} else {
+			return rawValue
+		}
 	} else {
-		return rawValue
+		TraceWarn(colorstring.Color("[yellow]" + host + "[light_yellow] is not configured, cannot retrieve a token. Operation may fail"))
+		return ""
 	}
 }
