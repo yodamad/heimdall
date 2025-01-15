@@ -3,18 +3,20 @@ package cmd
 import (
 	"fmt"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/yodamad/heimdall/commons"
 	"github.com/yodamad/heimdall/utils"
+	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"net/url"
 	"os"
 	"regexp"
 	"strings"
 )
 
-var hostname, keepSuffix bool
+var hostname, keepSuffix, isGroupClone bool
 
 var GitClone = &cobra.Command{
 	Use:     "git-clone",
@@ -43,17 +45,66 @@ var GitClone = &cobra.Command{
 		if !strings.HasSuffix(commons.WorkDir, "/") {
 			commons.WorkDir += "/"
 		}
-		cloneRepo(args[0])
+		clone(args[0])
 	},
 }
 
 func init() {
 	GitClone.Flags().BoolVarP(&hostname, "include-hostname", "i", false, "Include hostname in path created ?")
 	GitClone.Flags().BoolVarP(&keepSuffix, "keep-hostname-suffix", "k", false, "Include hostname suffix (.com, .fr,...) in path created ?")
+	GitClone.Flags().BoolVarP(&isGroupClone, "clone-group", "g", false, "Clone all repositories under the given URL")
+}
+
+func clone(urlArg string) {
+	if isGroupClone {
+		parsedUrl, _ := url.Parse(urlArg)
+		hostnameOfRepo := parsedUrl.Hostname()
+		if strings.Contains(hostnameOfRepo, "gitlab") {
+			cloneGitlabGroup(urlArg)
+		} else if strings.Contains(hostnameOfRepo, "github") {
+			cloneGithubGroup(urlArg)
+		} else {
+			utils.TraceWarn("Platform not supported yet (only gitlab.com & github.com)")
+		}
+	} else {
+		cloneRepo(urlArg)
+	}
+}
+
+func cloneGitlabGroup(groupUrl string) {
+	parsedUrl, _ := url.Parse(groupUrl)
+	hostnameOfRepo := parsedUrl.Hostname()
+	groupPath := parsedUrl.Path
+
+	utils.Trace(colorstring.Color("[light_blue] Listing projects in [yellow]GitLab[light_blue] group [cyan]"+groupPath), false)
+
+	gitlabClient, err := gitlab.NewClient(utils.GetToken(hostnameOfRepo, nil))
+	if err != nil {
+		utils.TraceWarn("Impossible to log to " + hostnameOfRepo)
+	}
+
+	projects, _, err := gitlabClient.Groups.ListGroupProjects(strings.TrimPrefix(groupPath, "/"), &gitlab.ListGroupProjectsOptions{
+		ListOptions:      gitlab.ListOptions{},
+		Archived:         gitlab.Ptr(false),
+		IncludeSubGroups: gitlab.Ptr(true),
+	})
+	if err != nil {
+		utils.TraceWarn("Cannot retrieve projects from group : " + err.Error())
+	}
+
+	for _, project := range projects {
+		projectUrl := project.WebURL
+		cloneRepo(projectUrl)
+	}
+
+}
+
+func cloneGithubGroup(orgUrl string) {
+	// TODO
 }
 
 func cloneRepo(inputUrl string) {
-	utils.Trace(colorstring.Color("[light_blue] Cloning "+inputUrl+"..."), false)
+	utils.Trace(colorstring.Color("[light_blue] Cloning [cyan]"+inputUrl+"..."), false)
 
 	parsedUrl, _ := url.Parse(inputUrl)
 	hostnameOfRepo := parsedUrl.Hostname()
@@ -64,22 +115,25 @@ func cloneRepo(inputUrl string) {
 			re := regexp.MustCompile(`\.[a-zA-Z]+$`)
 			hostnameOfRepo = re.ReplaceAllString(hostnameOfRepo, "")
 		}
-		clone(inputUrl, commons.WorkDir+hostnameOfRepo+pathToRepo)
+		doClone(inputUrl, commons.WorkDir+hostnameOfRepo+pathToRepo)
 	} else {
-		clone(inputUrl, commons.WorkDir+pathToRepo)
+		doClone(inputUrl, commons.WorkDir+pathToRepo)
 	}
 }
 
-func clone(inputUrl string, path string) {
+func doClone(inputUrl string, path string) {
+	parsedUrl, _ := url.Parse(inputUrl)
+	hostnameOfRepo := parsedUrl.Hostname()
 	path = strings.ReplaceAll(path, "//", "/")
-	utils.Trace("Create directory "+path, false)
+	utils.Trace("Create directory "+path, true)
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
 		utils.TraceWarn("Cannot create path : [light_blue] " + err.Error())
 	}
 	_, err = git.PlainClone(path, false, &git.CloneOptions{
+		Auth:     &http.BasicAuth{Password: utils.GetToken(hostnameOfRepo, nil)},
 		URL:      inputUrl + ".git",
-		Progress: os.Stderr,
+		Progress: nil,
 	})
 	if err != nil {
 		utils.TraceWarn("Git clone failed: [light_blue] " + err.Error())

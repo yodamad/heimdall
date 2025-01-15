@@ -50,7 +50,9 @@ func GetToken(host string, spinner *tea.Program) string {
 		envValue := os.Getenv(strings.TrimPrefix(rawValue, commons.ENV_VARIABLE))
 		if envValue == "" {
 			TraceWarn(strings.TrimPrefix(rawValue, commons.ENV_VARIABLE) + " referenced in config-file is not set")
-			spinner.Send(tui.ErrorMessage{Error: strings.TrimPrefix(rawValue, commons.ENV_VARIABLE) + " referenced in config-file is not set"})
+			if spinner != nil {
+				spinner.Send(tui.ErrorMessage{Error: strings.TrimPrefix(rawValue, commons.ENV_VARIABLE) + " referenced in config-file is not set"})
+			}
 			return ""
 		}
 		return envValue
