@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/google/go-github/v68/github"
 	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -96,11 +98,26 @@ func cloneGitlabGroup(groupUrl string) {
 		projectUrl := project.WebURL
 		cloneRepo(projectUrl)
 	}
-
 }
 
 func cloneGithubGroup(orgUrl string) {
-	// TODO
+	parsedUrl, _ := url.Parse(orgUrl)
+	hostnameOfOrg := parsedUrl.Hostname()
+	orgPath := parsedUrl.Path
+
+	utils.Trace(colorstring.Color("[light_blue] Listing projects in [yellow]GitHub[light_blue] organization [cyan]"+orgUrl), false)
+
+	token := utils.GetToken(hostnameOfOrg, nil)
+	githubClient := github.NewClient(nil).WithAuthToken(token)
+	cleanUrl := strings.TrimSuffix(strings.TrimPrefix(orgPath, "/"), "/")
+	repos, _, err := githubClient.Repositories.ListByOrg(context.Background(), cleanUrl, &github.RepositoryListByOrgOptions{})
+	if err != nil {
+		utils.TraceWarn("Cannot retrieve projects from group : " + err.Error())
+	}
+	for _, project := range repos {
+		projectUrl := project.GetCloneURL()
+		cloneRepo(strings.TrimSuffix(projectUrl, ".git"))
+	}
 }
 
 func cloneRepo(inputUrl string) {
