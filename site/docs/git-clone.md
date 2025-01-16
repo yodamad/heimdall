@@ -12,6 +12,14 @@ Several options are available to customize the created path and [global flags](f
 
 ![Options](./assets/heimdall-git-clone.gif)
 
+### Clone a group: `--clone-group` or `g`
+
+With this option, Heimdall will clone all repositories from the given group.
+
+For example, running `heimdall git-clone -g https://github.com/yodamad-actions` will clone into `<work_dir>/yodamad-actions/`.
+
+![Clone group](./assets/heimdall-git-clone-group.gif)
+
 ### Include hostname: `--include-hostname` or `i`
 
 Enabling this option will keep in the path created the hostname of the URL to be cloned, removing the suffix from it.
