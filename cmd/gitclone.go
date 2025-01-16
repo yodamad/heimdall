@@ -61,12 +61,13 @@ func clone(urlArg string) {
 	if isGroupClone {
 		parsedUrl, _ := url.Parse(urlArg)
 		hostnameOfRepo := parsedUrl.Hostname()
-		if strings.Contains(hostnameOfRepo, "gitlab") {
+		switch utils.GetPlatformType(hostnameOfRepo) {
+		case "gitlab":
 			cloneGitlabGroup(urlArg)
-		} else if strings.Contains(hostnameOfRepo, "github") {
+		case "github":
 			cloneGithubGroup(urlArg)
-		} else {
-			utils.TraceWarn("Platform not supported yet (only gitlab.com & github.com)")
+		default:
+			utils.TraceWarn("Platform type not supported yet (only gitlab & github for now)")
 		}
 	} else {
 		cloneRepo(urlArg)
@@ -91,7 +92,7 @@ func cloneGitlabGroup(groupUrl string) {
 		IncludeSubGroups: gitlab.Ptr(true),
 	})
 	if err != nil {
-		utils.TraceWarn("Cannot retrieve projects from group : " + err.Error())
+		utils.TraceWarn(colorstring.Color("Cannot retrieve projects from group : [red]" + err.Error()))
 	}
 
 	for _, project := range projects {
@@ -112,7 +113,7 @@ func cloneGithubGroup(orgUrl string) {
 	cleanUrl := strings.TrimSuffix(strings.TrimPrefix(orgPath, "/"), "/")
 	repos, _, err := githubClient.Repositories.ListByOrg(context.Background(), cleanUrl, &github.RepositoryListByOrgOptions{})
 	if err != nil {
-		utils.TraceWarn("Cannot retrieve projects from group : " + err.Error())
+		utils.TraceWarn(colorstring.Color("Cannot retrieve projects from group : [red]" + err.Error()))
 	}
 	for _, project := range repos {
 		projectUrl := project.GetCloneURL()
@@ -145,7 +146,7 @@ func doClone(inputUrl string, path string) {
 	utils.Trace("Create directory "+path, true)
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
-		utils.TraceWarn("Cannot create path : [light_blue] " + err.Error())
+		utils.TraceWarn(colorstring.Color("Cannot create path : [red] " + err.Error()))
 	}
 	_, err = git.PlainClone(path, false, &git.CloneOptions{
 		Auth:     &http.BasicAuth{Password: utils.GetToken(hostnameOfRepo, nil)},
@@ -153,6 +154,6 @@ func doClone(inputUrl string, path string) {
 		Progress: nil,
 	})
 	if err != nil {
-		utils.TraceWarn("Git clone failed: [light_blue] " + err.Error())
+		utils.TraceWarn(colorstring.Color("Git clone failed: [red] " + err.Error()))
 	}
 }
