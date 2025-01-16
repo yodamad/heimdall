@@ -22,7 +22,7 @@ func Trace(msg string, isDebug bool) {
 }
 
 func TraceWarn(msg string) {
-	fmt.Println(colorstring.Color("[light_yellow]" + msg + "[default]"))
+	fmt.Println(colorstring.Color("[light_yellow]⚠ " + msg + "[default]"))
 	log.Info(cleanForLog(msg))
 }
 

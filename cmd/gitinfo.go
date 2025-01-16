@@ -389,7 +389,7 @@ func gitPull(folder entity.GitFolder) {
 	worktree, _ := repo.Worktree()
 	err := worktree.Pull(&git.PullOptions{RemoteName: "origin"})
 	if err != nil {
-		utils.TraceWarn("Cannot pull : " + err.Error())
+		utils.TraceWarn(colorstring.Color("Cannot pull : [red]" + err.Error()))
 	}
 	utils.Trace(colorstring.Color("✅ [bold]"+folder.Path+"[reset] pulled"), false)
 }
