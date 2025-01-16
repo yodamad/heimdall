@@ -18,6 +18,8 @@ builds:
     ignore:
       - goos: linux
         goarch: arm
+    ldflags:
+      - -s -w -X github.com/yodamad/heimdall/build.Version={{.Version}} -X github.com/yodamad/heimdall/build.Commit={{.Commit}} -X github.com/yodamad/heimdall/build.Date={{.Date}}
 
 archives:
   - format: tar.gz

@@ -5,6 +5,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/mitchellh/colorstring"
+	"github.com/yodamad/heimdall/build"
 	"github.com/yodamad/heimdall/cmd/entity"
 	"github.com/yodamad/heimdall/commons"
 	"os"
@@ -23,9 +24,9 @@ func PrintBanner() {
 	))
 
 	if commons.Verbose {
-		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset] (commit %s), built at %s\n"), commons.Version, commons.Commit, commons.Date)
+		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset] (commit %s), built at %s\n"), build.Version, build.Commit, build.Date)
 	} else {
-		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset]\n"), commons.Version)
+		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset]\n"), build.Version)
 	}
 
 	fmt.Println("  ")

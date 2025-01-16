@@ -11,13 +11,6 @@ import (
 	"os"
 )
 
-// ldflags vars
-var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
-)
-
 var rootCmd = &cobra.Command{
 	Use:   "heimdall",
 	Short: colorstring.Color("[yellow]Heimdall[default] helps you with your git folders"),
@@ -33,11 +26,6 @@ You can check, update, ... everything easily
 }
 
 func init() {
-
-	commons.Version = version
-	commons.Commit = commit
-	commons.Date = date
-
 	rootCmd.AddCommand(cmd.GitInfo)
 	rootCmd.AddCommand(cmd.GitClone)
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
