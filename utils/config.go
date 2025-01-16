@@ -36,11 +36,12 @@ func UseConfig() {
 		if err != nil {
 			fmt.Println(colorstring.Color("[light_yellow]Cannot read config in file : [red]"+commons.InputConfigFile) + "[light_yellow] Ignore it...")
 		}
-		if commons.WorkDir == commons.DefaultWorkDir {
+		if commons.WorkDir == "" || commons.WorkDir == commons.DefaultWorkDir {
 			workDir := viper.GetString("work_dir")
 			if workDir != "" {
 				if info, err := os.Stat(workDir); err != nil || !info.IsDir() {
 					fmt.Println(colorstring.Color("[light_yellow]The work_dir is not a valid directory: [red]" + workDir))
+					commons.WorkDir = commons.DefaultWorkDir
 				} else {
 					commons.WorkDir = workDir
 				}
@@ -58,11 +59,20 @@ func BuildPlatforms() {
 	// Iterating over the map
 	for key := range platforms {
 		infos := viper.GetStringMap("platforms." + key)
-		platform := Platform{
-			typeOf: infos["type"].(string),
-			token:  infos["token"].(string),
+
+		if infos["type"] == nil {
+			TraceWarn(colorstring.Color("[light_yellow]Platform [blue]" + key + "[light_yellow] is not correctly configured : missing [blue]type[light_yellow] field. Ignoring it..."))
+			continue
+		} else if infos["token"] == nil {
+			TraceWarn(colorstring.Color("[light_yellow]Platform [blue]" + key + "[light_yellow] is not correctly configured : missing [blue]token[light_yellow] field. Ignoring it..."))
+			continue
+		} else {
+			platform := Platform{
+				typeOf: infos["type"].(string),
+				token:  infos["token"].(string),
+			}
+			ConfiguredPlatforms[key] = platform
 		}
-		ConfiguredPlatforms[key] = platform
 	}
 }
 
