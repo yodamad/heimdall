@@ -50,7 +50,7 @@ var InputConfigFile = DefaultFolder + DefaultConfigFile
 // ENV_VARIABLE /* Prefix for env. variable in config file */
 const ENV_VARIABLE = "env."
 
-var HelpMessageTemplate = colorstring.Color(`[light_blue]            _               _       _ _ 
+var HelpMessageTemplate = colorstring.Color(`[light_blue]            _               _       _ _
   /\  /\___(_)_ __ ___   __| | __ _| | |
  / /_/ / _ \ | '_ `+"`"+` _ \ / _`+"`"+` |/ _`+"`"+` | | |
 / __  /  __/ | | | | | | (_| | (_| | | |
@@ -85,4 +85,4 @@ Additional Commands:{{range $cmds}}{{if (and (eq .GroupID "") (or .IsAvailableCo
 Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
   {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
 
-Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}`)
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}`) + fmt.Sprintf("\n")
