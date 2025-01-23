@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag name'
+        description: 'Release tag name (starting with a `v`)'
         required: true
 
 jobs:
@@ -38,3 +38,21 @@ jobs:
         name: Publish to pkg.go.dev
         run:  |
           GOPROXY=proxy.golang.org go list -m github.com/yodamad/heimdall@${{ github.event.inputs.tag }}
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
+      - uses: actions/cache@v4
+        with:
+          key: mkdocs-material-${{ env.cache_id }}
+          path: .cache
+          restore-keys: |
+            mkdocs-material-
+      - run: |
+          cd site
+          pip install -r requirements.txt
+          mkdocs gh-deploy --force
