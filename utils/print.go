@@ -2,19 +2,20 @@ package utils
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/mitchellh/colorstring"
 	"github.com/yodamad/heimdall/build"
 	"github.com/yodamad/heimdall/cmd/entity"
 	"github.com/yodamad/heimdall/commons"
-	"os"
-	"strings"
 )
 
 func PrintBanner() {
 	fmt.Print(colorstring.Color(
-		`[light_blue]            _               _       _ _ 
+		`[light_blue]            _               _       _ _
   /\  /\___(_)_ __ ___   __| | __ _| | |
  / /_/ / _ \ | '_ ` + "`" + ` _ \ / _` + "`" + ` |/ _` + "`" + ` | | |
 / __  /  __/ | | | | | | (_| | (_| | | |
@@ -24,7 +25,8 @@ func PrintBanner() {
 	))
 
 	if commons.Verbose {
-		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset] (commit %s), built at %s\n"), build.Version, build.Commit, build.Date)
+		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset] (commit %s), built at %s\n"),
+			build.BuildInfos.GitVersion, build.BuildInfos.GitCommit[:7], build.BuildInfos.BuildDate)
 	} else {
 		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset]\n"), build.Version)
 	}
