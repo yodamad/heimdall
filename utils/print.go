@@ -25,8 +25,8 @@ func PrintBanner() {
 	))
 
 	if commons.Verbose {
-		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset] (commit %s), built at %s\n"),
-			build.BuildInfos.GitVersion, build.BuildInfos.GitCommit[:7], build.BuildInfos.BuildDate)
+		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset] (commit %s), built at %s, compiled with %s\n"),
+			build.BuildInfos.GitVersion, build.BuildInfos.GitCommit[:7], build.BuildInfos.BuildDate, build.BuildInfos.GoVersion)
 	} else {
 		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset]\n"), build.Version)
 	}
