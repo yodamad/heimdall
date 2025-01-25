@@ -2,9 +2,10 @@ package commons
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/mitchellh/colorstring"
 	"github.com/yodamad/heimdall/build"
-	"os"
 )
 
 var DefaultFolderFunc = func() string { home, _ := os.UserHomeDir(); return home + "/.heimdall/" }
@@ -56,7 +57,7 @@ var HelpMessageTemplate = colorstring.Color(`[light_blue]            _          
 / __  /  __/ | | | | | | (_| | (_| | | |
 \/ /_/ \___|_|_| |_| |_|\__,_|\__,_|_|_|
 
-[default]`) + fmt.Sprintf(colorstring.Color("Version [bold][light_gray]%s[reset]\n"), build.Version) + colorstring.Color(`
+[default]`) + fmt.Sprintf(colorstring.Color("Version [bold][light_gray]%s[reset]\n"), build.BuildInfos.GitVersion) + colorstring.Color(`
 [bold]Usage[reset]:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
