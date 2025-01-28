@@ -6,7 +6,7 @@ import (
 
 // vars could be modified with ldflags
 var (
-	Version = "devel"
+	Version = "dev"
 	Commit  = ""
 	Date    = ""
 )
@@ -20,7 +20,7 @@ func GetBuildInfos() goversion.Info {
 			if Date != "" {
 				i.BuildDate = Date
 			}
-			if Version != "devel" {
+			if Version != "dev" {
 				i.GitVersion = Version
 			}
 		},
