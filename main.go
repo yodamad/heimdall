@@ -28,6 +28,7 @@ You can check, update, ... everything easily
 func init() {
 	rootCmd.AddCommand(cmd.GitInfo)
 	rootCmd.AddCommand(cmd.GitClone)
+	rootCmd.AddCommand(cmd.EnvInfo)
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DefaultFolder, "log directory")
 	rootCmd.PersistentFlags().StringVarP(&commons.WorkDir, "work-dir", "w", commons.DefaultWorkDir, "work directory")
