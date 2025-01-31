@@ -90,8 +90,10 @@ func listGitDirs() {
 
 	// Start the spinner
 	prg := tea.NewProgram(m)
+
 	go func() {
 		if _, err := prg.Run(); err != nil {
+			prg.ReleaseTerminal()
 		}
 	}()
 
@@ -375,7 +377,12 @@ func gitFetch(repo *git.Repository, spinner *tea.Program) error {
 	}
 	gitUrl, err := url.Parse(origin)
 	if err != nil {
-		log.Fatal(err)
+		if commons.Verbose && spinner != nil {
+			spinner.Send(tui.ErrorMessage{Error: err.Error()})
+		} else {
+			utils.TraceWarn("Cannot parse URL : " + err.Error())
+		}
+		return err
 	}
 	hostname := strings.TrimPrefix(gitUrl.Hostname(), "www.")
 	if utils.GetToken(hostname, spinner) != "" {
