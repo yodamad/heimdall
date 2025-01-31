@@ -190,7 +190,7 @@ func checkIfUpToDate(path string, spinner *tea.Program) (git.Status, error) {
 	if err != nil {
 		return nil, err
 	} else {
-		err = gitFetch(repo, spinner)
+		connectionType, err := gitFetch(repo, spinner)
 		if err != nil && err.Error() != "already up-to-date" {
 			return nil, err
 		} else {
@@ -209,6 +209,7 @@ func checkIfUpToDate(path string, spinner *tea.Program) (git.Status, error) {
 				HasLocalChanges:      !s.IsClean(),
 				DetailedLocalChanges: s.String(),
 				RemoteChanges:        string(out),
+				ConnectionType:       connectionType,
 			})
 
 			return s, err
@@ -282,7 +283,7 @@ func chooseInteractiveOption(spinner *tea.Program) {
 
 func listLocalChanges(path string, spinner *tea.Program) {
 	repo, _ := git.PlainOpen(path)
-	err := gitFetch(repo, spinner)
+	_, err := gitFetch(repo, spinner)
 	if err != nil {
 		utils.TraceWarn("Impossible to fetch : " + err.Error())
 	}
@@ -362,11 +363,13 @@ func selectItems(items []entity.GitFolder, fn filterFolder) []entity.GitFolder {
 	return picked
 }
 
-func gitFetch(repo *git.Repository, spinner *tea.Program) error {
+func gitFetch(repo *git.Repository, spinner *tea.Program) (string, error) {
+	connectionType := ""
 	fetchOptions := &git.FetchOptions{}
 	remote, _ := repo.Remote(commons.REMOTE_NAME)
 	origin := remote.Config().URLs[0]
 	if strings.Contains(origin, "@") {
+		connectionType = "SSH"
 		re := regexp.MustCompile(`\w+`)
 		user := re.FindStringSubmatch(origin)
 
@@ -382,14 +385,15 @@ func gitFetch(repo *git.Repository, spinner *tea.Program) error {
 			} else {
 				utils.TraceWarn("Cannot parse URL : " + err.Error())
 			}
-			return err
+			return "", err
 		}
 		hostname := strings.TrimPrefix(gitUrl.Hostname(), "www.")
+		connectionType = strings.ToUpper(gitUrl.Scheme)
 		if utils.GetToken(hostname, spinner) != "" {
 			fetchOptions.Auth = &http.BasicAuth{Password: utils.GetToken(hostname, spinner)}
 		}
 	}
-	return repo.Fetch(fetchOptions)
+	return connectionType, repo.Fetch(fetchOptions)
 }
 
 func gitPull(folder entity.GitFolder) {
