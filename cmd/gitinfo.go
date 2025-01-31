@@ -90,8 +90,10 @@ func listGitDirs() {
 
 	// Start the spinner
 	prg := tea.NewProgram(m)
+
 	go func() {
 		if _, err := prg.Run(); err != nil {
+			prg.ReleaseTerminal()
 		}
 	}()
 
@@ -372,14 +374,20 @@ func gitFetch(repo *git.Repository, spinner *tea.Program) error {
 		sshKey, _ := os.ReadFile(commons.PUBLICKEY_PATH)
 		publicKey, _ = ssh.NewPublicKeys(user[0], sshKey, commons.SSHKEY_PASSWORD)
 		fetchOptions.Auth = publicKey
-	}
-	gitUrl, err := url.Parse(origin)
-	if err != nil {
-		log.Fatal(err)
-	}
-	hostname := strings.TrimPrefix(gitUrl.Hostname(), "www.")
-	if utils.GetToken(hostname, spinner) != "" {
-		fetchOptions.Auth = &http.BasicAuth{Password: utils.GetToken(hostname, spinner)}
+	} else if strings.HasPrefix(origin, "http") {
+		gitUrl, err := url.Parse(origin)
+		if err != nil {
+			if commons.Verbose && spinner != nil {
+				spinner.Send(tui.ErrorMessage{Error: err.Error()})
+			} else {
+				utils.TraceWarn("Cannot parse URL : " + err.Error())
+			}
+			return err
+		}
+		hostname := strings.TrimPrefix(gitUrl.Hostname(), "www.")
+		if utils.GetToken(hostname, spinner) != "" {
+			fetchOptions.Auth = &http.BasicAuth{Password: utils.GetToken(hostname, spinner)}
+		}
 	}
 	return repo.Fetch(fetchOptions)
 }
