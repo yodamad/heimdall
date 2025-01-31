@@ -8,6 +8,7 @@ type GitFolder struct {
 	HasLocalChanges      bool
 	DetailedLocalChanges string
 	RemoteChanges        string
+	ConnectionType       string
 }
 
 func HasRemoteChanges(gitFolder GitFolder) bool {
