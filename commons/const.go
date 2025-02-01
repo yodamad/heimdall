@@ -13,6 +13,11 @@ var DefaultFolderFunc = func() string { home, _ := os.UserHomeDir(); return home
 // DefaultFolder /* Default folder for git-info search */
 var DefaultFolder = DefaultFolderFunc()
 
+var DefaultConfigDirFunc = func() string { config, _ := os.UserConfigDir(); return config + "/heimdall/" }
+
+// DefaultConfigFolder /* Default config folder */
+var DefaultConfigFolder = DefaultConfigDirFunc()
+
 // DefaultConfigFile /* Default config file name */
 var DefaultConfigFile = "heimdall.yml"
 
@@ -46,7 +51,7 @@ var Verbose bool
 var Interactive bool
 
 // InputConfigFile /* The config file to use */
-var InputConfigFile = DefaultFolder + DefaultConfigFile
+var InputConfigFile = DefaultConfigFolder + DefaultConfigFile
 
 // ENV_VARIABLE /* Prefix for env. variable in config file */
 const ENV_VARIABLE = "env."

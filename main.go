@@ -44,6 +44,15 @@ func init() {
 		}
 	}
 
+	// Create config dir.
+	_, err = os.Stat(commons.DefaultConfigFolder)
+	if os.IsNotExist(err) {
+		err := os.Mkdir(commons.DefaultConfigFolder, os.ModePerm)
+		if err != nil {
+			fmt.Errorf("Cannot create dir " + err.Error())
+		}
+	}
+
 	log.SetFormatter(&log.TextFormatter{
 		DisableLevelTruncation: true,
 	})
