@@ -3,20 +3,36 @@ package commons
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/mitchellh/colorstring"
 	"github.com/yodamad/heimdall/build"
 )
 
-var DefaultFolderFunc = func() string { home, _ := os.UserHomeDir(); return home + "/.heimdall/" }
+var DefaultConfFolderFunc = func() string {
+	home, _ := os.UserConfigDir()
+	if runtime.GOOS == "darwin" {
+		home = os.Getenv("HOME")
+	}
+	return home + "/.heimdall/"
+}
 
 // DefaultFolder /* Default folder for git-info search */
-var DefaultFolder = DefaultFolderFunc()
+var DefaultConfFolder = DefaultConfFolderFunc()
 
 // DefaultConfigFile /* Default config file name */
 var DefaultConfigFile = "heimdall.yml"
 
 var DefaultWorkDirFunc = func() string { home, _ := os.UserHomeDir(); return home }
+
+var DefaultLogFolder = DefaultLogDirFunc()
+var DefaultLogDirFunc = func() string {
+	home, _ := os.UserCacheDir()
+	if runtime.GOOS == "darwin" {
+		home = DefaultConfFolder
+	}
+	return home
+}
 
 // DefaultWorkDir /* Default work folder */
 var DefaultWorkDir = DefaultWorkDirFunc()
@@ -46,7 +62,7 @@ var Verbose bool
 var Interactive bool
 
 // InputConfigFile /* The config file to use */
-var InputConfigFile = DefaultFolder + DefaultConfigFile
+var InputConfigFile = DefaultConfFolder + DefaultConfigFile
 
 // ENV_VARIABLE /* Prefix for env. variable in config file */
 const ENV_VARIABLE = "env."
