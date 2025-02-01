@@ -30,17 +30,17 @@ func init() {
 	rootCmd.AddCommand(cmd.GitClone)
 	rootCmd.AddCommand(cmd.EnvInfo)
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
-	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DefaultFolder, "log directory")
+	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DefaultLogFolder, "log directory")
 	rootCmd.PersistentFlags().StringVarP(&commons.WorkDir, "work-dir", "w", commons.DefaultWorkDir, "work directory")
 	rootCmd.PersistentFlags().StringVarP(&commons.InputConfigFile, "config-file", "c", commons.InputConfigFile, "config file")
 
 	// Init .heimdall folder
-	_, err := os.Stat(commons.DefaultFolder)
+	_, err := os.Stat(commons.DefaultConfFolder)
 	if os.IsNotExist(err) {
-		err := os.Mkdir(commons.DefaultFolder, os.ModePerm)
+		err := os.Mkdir(commons.DefaultConfFolder, os.ModePerm)
 		if err != nil {
 			fmt.Errorf("Cannot create dir " + err.Error())
-			commons.DefaultFolder = os.TempDir()
+			commons.DefaultConfFolder = os.TempDir()
 		}
 	}
 
@@ -49,7 +49,7 @@ func init() {
 	})
 	// Output to stdout instead of the default stderr
 	// Can be any io.Writer, see below for File example
-	f, _ := os.OpenFile(commons.DefaultFolder+"heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	f, _ := os.OpenFile(commons.DefaultLogFolder+"heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	log.SetOutput(f)
 
 	// Only log the warning severity or above.
