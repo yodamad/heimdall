@@ -36,8 +36,8 @@ var GitClone = &cobra.Command{
 	Short: "Git clone given repository to a folder based on the path of the repo",
 	Run: func(cmd *cobra.Command, args []string) {
 		utils.UseConfig()
-		utils.OverrideLogFile()
 		utils.PrintBanner()
+		utils.OverrideLogFile()
 		if commons.Verbose {
 			log.SetLevel(log.DebugLevel)
 		}

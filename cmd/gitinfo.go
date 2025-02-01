@@ -33,8 +33,8 @@ var GitInfo = &cobra.Command{
 	Short:   "List all directories containing a `.git` folder",
 	Run: func(cmd *cobra.Command, args []string) {
 		utils.UseConfig()
-		utils.OverrideLogFile()
 		utils.PrintBanner()
+		utils.OverrideLogFile()
 		if commons.Verbose {
 			log.SetLevel(log.DebugLevel)
 		}
@@ -82,7 +82,7 @@ func listGitDirs() {
 		Spinner: s,
 	}
 
-	if rootDir == commons.DefaultFolder {
+	if rootDir == commons.DefaultWorkDir {
 		m.Text = colorstring.Color("Searching in [bold]default directory[default] : " + tui.PathColor + "'" + rootDir + "'[default]")
 	} else {
 		m.Text = colorstring.Color("Searching in " + tui.PathColor + "'" + rootDir + "'[default] ...")
