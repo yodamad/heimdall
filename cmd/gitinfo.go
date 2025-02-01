@@ -374,7 +374,15 @@ func gitFetch(repo *git.Repository, spinner *tea.Program) (string, error) {
 		user := re.FindStringSubmatch(origin)
 
 		var publicKey *ssh.PublicKeys
-		sshKey, _ := os.ReadFile(commons.PUBLICKEY_PATH)
+		sshKey, err := os.ReadFile(commons.PUBLICKEY_PATH)
+		if err != nil {
+			if spinner != nil {
+				spinner.Send(tui.ErrorMessage{Error: err.Error()})
+			} else {
+				utils.TraceWarn("Cannot read file : " + err.Error())
+			}
+			return "", err
+		}
 		publicKey, _ = ssh.NewPublicKeys(user[0], sshKey, commons.SSHKEY_PASSWORD)
 		fetchOptions.Auth = publicKey
 	} else if strings.HasPrefix(origin, "http") {
