@@ -87,13 +87,13 @@ func GetPlatformType(host string) string {
 func GetToken(host string, spinner *tea.Program) string {
 	if platform, isPresent := ConfiguredPlatforms[host]; isPresent {
 		rawValue := platform.token
-		if strings.HasPrefix(rawValue, commons.ENV_VARIABLE) {
-			envValue := os.Getenv(strings.TrimPrefix(rawValue, commons.ENV_VARIABLE))
+		if strings.HasPrefix(rawValue, commons.EnvVariable) {
+			envValue := os.Getenv(strings.TrimPrefix(rawValue, commons.EnvVariable))
 			if envValue == "" {
 				if spinner != nil {
-					spinner.Send(tui.ErrorMessage{Error: strings.TrimPrefix(rawValue, commons.ENV_VARIABLE) + " referenced in config-file is not set"})
+					spinner.Send(tui.ErrorMessage{Error: strings.TrimPrefix(rawValue, commons.EnvVariable) + " referenced in config-file is not set"})
 				} else {
-					TraceWarn(colorstring.Color("[light_blue]" + strings.TrimPrefix(rawValue, commons.ENV_VARIABLE) + "[yellow] referenced in config-file is not set"))
+					TraceWarn(colorstring.Color("[light_blue]" + strings.TrimPrefix(rawValue, commons.EnvVariable) + "[yellow] referenced in config-file is not set"))
 				}
 				return ""
 			}

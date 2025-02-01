@@ -24,7 +24,7 @@ import (
 	"strings"
 )
 
-var searchDepth = commons.MAX_DEPTH
+var searchDepth = commons.MaxDepth
 var gitFolders []entity.GitFolder
 
 var GitInfo = &cobra.Command{
@@ -43,7 +43,7 @@ var GitInfo = &cobra.Command{
 }
 
 func init() {
-	GitInfo.Flags().IntVarP(&searchDepth, "depth", "d", commons.MAX_DEPTH, "search depth")
+	GitInfo.Flags().IntVarP(&searchDepth, "depth", "d", commons.MaxDepth, "search depth")
 	GitInfo.Flags().BoolVarP(&commons.Interactive, "interactive-mode", "i", false, "interactive mode")
 }
 
@@ -366,7 +366,7 @@ func selectItems(items []entity.GitFolder, fn filterFolder) []entity.GitFolder {
 func gitFetch(repo *git.Repository, spinner *tea.Program) (string, error) {
 	connectionType := ""
 	fetchOptions := &git.FetchOptions{}
-	remote, _ := repo.Remote(commons.REMOTE_NAME)
+	remote, _ := repo.Remote(commons.RemoteName)
 	origin := remote.Config().URLs[0]
 	if strings.Contains(origin, "@") {
 		connectionType = "SSH"
@@ -374,7 +374,7 @@ func gitFetch(repo *git.Repository, spinner *tea.Program) (string, error) {
 		user := re.FindStringSubmatch(origin)
 
 		var publicKey *ssh.PublicKeys
-		sshKey, err := os.ReadFile(commons.PUBLICKEY_PATH)
+		sshKey, err := os.ReadFile(commons.PublickeyPath)
 		if err != nil {
 			if spinner != nil {
 				spinner.Send(tui.ErrorMessage{Error: err.Error()})
@@ -383,7 +383,7 @@ func gitFetch(repo *git.Repository, spinner *tea.Program) (string, error) {
 			}
 			return "", err
 		}
-		publicKey, _ = ssh.NewPublicKeys(user[0], sshKey, commons.SSHKEY_PASSWORD)
+		publicKey, _ = ssh.NewPublicKeys(user[0], sshKey, commons.SshkeyPassword)
 		fetchOptions.Auth = publicKey
 	} else if strings.HasPrefix(origin, "http") {
 		gitUrl, err := url.Parse(origin)

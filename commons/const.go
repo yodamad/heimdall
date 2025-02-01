@@ -17,7 +17,7 @@ var DefaultConfFolderFunc = func() string {
 	return home + "/.heimdall/"
 }
 
-// DefaultFolder /* Default folder for git-info search */
+// DefaultConfFolder DefaultFolder /* Default folder for git-info search */
 var DefaultConfFolder = DefaultConfFolderFunc()
 
 // DefaultConfigFile /* Default config file name */
@@ -37,17 +37,17 @@ var DefaultLogDirFunc = func() string {
 // DefaultWorkDir /* Default work folder */
 var DefaultWorkDir = DefaultWorkDirFunc()
 
-// MAX_DEPTH /* Depth of search */
-const MAX_DEPTH = 3
+// MaxDepth /* Depth of search */
+const MaxDepth = 3
 
-// PUBLICKEY_PATH /* Path for public key for ssh authentication */
-var PUBLICKEY_PATH = os.Getenv("HOME") + "/.ssh/id_rsa"
+// PublickeyPath /* Path for public key for ssh authentication */
+var PublickeyPath = os.Getenv("HOME") + "/.ssh/id_rsa"
 
-// SSHKEY_PASSWORD /* Default password for ssh authentication key opening */
-const SSHKEY_PASSWORD = ""
+// SshkeyPassword /* Default password for ssh authentication key opening */
+const SshkeyPassword = ""
 
-// REMOTE_NAME /* Name of the remote URL */
-const REMOTE_NAME = "origin"
+// RemoteName /* Name of the remote URL */
+const RemoteName = "origin"
 
 // WorkDir /* Which directory to start from */
 var WorkDir string
@@ -64,8 +64,8 @@ var Interactive bool
 // InputConfigFile /* The config file to use */
 var InputConfigFile = DefaultConfFolder + DefaultConfigFile
 
-// ENV_VARIABLE /* Prefix for env. variable in config file */
-const ENV_VARIABLE = "env."
+// EnvVariable /* Prefix for env. variable in config file */
+const EnvVariable = "env."
 
 var HelpMessageTemplate = colorstring.Color(`[light_blue]            _               _       _ _
   /\  /\___(_)_ __ ___   __| | __ _| | |
