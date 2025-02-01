@@ -28,3 +28,9 @@ __*On Windows:*__ ❌ Not available for now, some compatibilities problems.
 
 !!!tip "WSL2 option"
     It works with the linux version
+
+## How to configure
+
+All the configuration elements are detailed in the [configuration file](config.md) section.
+
+You can override this value with the `--config-file` or `-f` flag defined in the [global flags](flags.md#config-file----config-file-or--f).

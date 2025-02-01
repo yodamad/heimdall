@@ -7,7 +7,7 @@ Based on the myth of the Nordic God, [Heimdall](https://en.wikipedia.org/wiki/He
 For now, Heimdall has 2 main commands :
 
 - [Git-info](https://yodamad.github.io/heimdall/git-info) to help you manage all your git repositories and now their current branch, if they have some local changes or if they are behind the remote repository
-- [Git-clone](https://yodamad.github.io/heimdall/git-clone) to clone a git repository and keep the same path
+- [Git-clone](https://yodamad.github.io/heimdall/git-clone) to clone a git repository or all repositories of a group (in GitHub or GitLab) and keep the same path
 
 The complete documentation can be found on the dedicated [docsite](https://yodamad.github.io/heimdall/) and here is a quick demo of the interactive mode ⤵️
 

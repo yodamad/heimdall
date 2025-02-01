@@ -8,24 +8,13 @@ You can display options with `-h` option
 
 ## Config file : `--config-file` or `-f`
 
-For some operations, some information are required. For instance, for some Git instances, an authentication token is needed.
+By default, Heimdall will look for a configuration file in the default config directory with the name `heimdall.yml`.
 
-This file has to be a `yaml` formatted file.
-
-In this config file, you can configure these elements either in hardcoded value (bad for security) or reference an environment variable.
-The value pointing to an environment variable has to be prefixed by `env.`.
+You can override this value with this flag to specify the path of your configuration file locally.
 
 ```bash
 heimdall git-info -f /work/heimdall.yml
 ```
-
-!!!example "A sample file"
-    ```yaml
-    work_dir: /home/johndoe/work/
-    tokens:
-      gitlab.mycompany.com: MY_TOKEN # Bad !!
-      secured.mycompany.com: env.ENV_VAR_TOKEN
-    ```
 
 ## Log directory : `--log-dir` or `-l`
 
