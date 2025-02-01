@@ -370,20 +370,16 @@ func gitFetch(repo *git.Repository, spinner *tea.Program) (string, error) {
 	origin := remote.Config().URLs[0]
 	if strings.Contains(origin, "@") {
 		connectionType = "SSH"
-		re := regexp.MustCompile(`\w+`)
+		re := regexp.MustCompile(`(?P<User>[^@]+)@(?P<Host>[^:]+)`)
 		user := re.FindStringSubmatch(origin)
 
 		var publicKey *ssh.PublicKeys
-		sshKey, err := os.ReadFile(commons.PublickeyPath)
-		if err != nil {
-			if spinner != nil {
-				spinner.Send(tui.ErrorMessage{Error: err.Error()})
-			} else {
-				utils.TraceWarn("Cannot read file : " + err.Error())
-			}
-			return "", err
+		sshKey := utils.GetPublicKey(user[2], spinner)
+		if sshKey == "" {
+			return "", nil
 		}
-		publicKey, _ = ssh.NewPublicKeys(user[0], sshKey, commons.SshkeyPassword)
+		fileContent, _ := os.ReadFile(sshKey)
+		publicKey, _ = ssh.NewPublicKeys(user[1], fileContent, utils.GetPublicKeyPassword(user[2], spinner))
 		fetchOptions.Auth = publicKey
 	} else if strings.HasPrefix(origin, "http") {
 		gitUrl, err := url.Parse(origin)

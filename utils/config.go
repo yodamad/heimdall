@@ -12,8 +12,10 @@ import (
 )
 
 type Platform struct {
-	typeOf string
-	token  string
+	typeOf            string
+	token             string
+	publicKey         string
+	publicKeyPassword string
 }
 
 var ConfiguredPlatforms = make(map[string]Platform)
@@ -71,6 +73,12 @@ func BuildPlatforms() {
 				typeOf: infos["type"].(string),
 				token:  infos["token"].(string),
 			}
+			if infos["public_key"] != nil {
+				platform.publicKey = infos["public_key"].(string)
+			}
+			if infos["public_key_password"] != nil {
+				platform.publicKeyPassword = infos["public_key_password"].(string)
+			}
 			ConfiguredPlatforms[key] = platform
 		}
 	}
@@ -104,5 +112,60 @@ func GetToken(host string, spinner *tea.Program) string {
 	} else {
 		TraceWarn(colorstring.Color("[yellow]" + host + "[light_yellow] is not configured, cannot retrieve a token. Operation may fail"))
 		return ""
+	}
+}
+
+func GetPublicKey(host string, spinner *tea.Program) string {
+	if platform, isPresent := ConfiguredPlatforms[host]; isPresent {
+		rawValue := platform.publicKey
+		if rawValue == "" {
+			log := colorstring.Color("⚠️ [yellow]" + host + "[light_yellow] publickey is not configured. Using default one: [light_blue]" + commons.PublickeyPath)
+			if spinner != nil {
+				spinner.Send(tui.InfoMessage{Message: log})
+			} else {
+				TraceWarn(log)
+			}
+			return commons.PublickeyPath
+		} else if _, err := os.Stat(rawValue); err != nil {
+			log := colorstring.Color("⚠️ [light_yellow]Public key [blue]" + rawValue + "[light_yellow] does not exist. Operation may fail")
+			if spinner != nil {
+				spinner.Send(tui.ErrorMessage{Error: log})
+			} else {
+				TraceWarn(log)
+			}
+			return ""
+		}
+		return rawValue
+	} else {
+		log := colorstring.Color("⚠️ [yellow]" + host + "[light_yellow] publickey is not configured. Using default one: [light_blue]" + commons.PublickeyPath)
+		if spinner != nil {
+			spinner.Send(tui.InfoMessage{Message: log})
+		} else {
+			TraceWarn(log)
+		}
+		return commons.PublickeyPath
+	}
+}
+
+func GetPublicKeyPassword(host string, spinner *tea.Program) string {
+	if platform, isPresent := ConfiguredPlatforms[host]; isPresent {
+		rawValue := platform.publicKeyPassword
+		if strings.HasPrefix(rawValue, commons.EnvVariable) {
+			envValue := os.Getenv(strings.TrimPrefix(rawValue, commons.EnvVariable))
+			if envValue == "" {
+				log := strings.TrimPrefix(rawValue, commons.EnvVariable) + " referenced in config-file is not set"
+				if spinner != nil {
+					spinner.Send(tui.ErrorMessage{Error: log})
+				} else {
+					TraceWarn(log)
+				}
+				return commons.SshkeyPassword
+			}
+			return envValue
+		} else {
+			return rawValue
+		}
+	} else {
+		return commons.SshkeyPassword
 	}
 }
