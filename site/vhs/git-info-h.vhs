@@ -1,4 +1,4 @@
-Output heimdall-env-info-demo.gif
+Output ../docs/assets/heimdall-git-info-help.gif
 
 Set Shell "zsh"
 Set FontSize 24

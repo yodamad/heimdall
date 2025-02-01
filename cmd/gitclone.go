@@ -122,7 +122,7 @@ func cloneGithubGroup(orgUrl string) {
 }
 
 func cloneRepo(inputUrl string) {
-	utils.Trace(colorstring.Color("[light_blue] Cloning [cyan]"+inputUrl+"..."), false)
+	utils.Trace(colorstring.Color("[light_blue]🧬 Cloning [cyan]"+inputUrl+"..."), false)
 
 	parsedUrl, _ := url.Parse(inputUrl)
 	hostnameOfRepo := parsedUrl.Hostname()
@@ -137,6 +137,7 @@ func cloneRepo(inputUrl string) {
 	} else {
 		doClone(inputUrl, commons.WorkDir+pathToRepo)
 	}
+	utils.Trace(colorstring.Color("[light_blue]✅ [cyan]"+inputUrl+"[light_blue] cloned"), false)
 }
 
 func doClone(inputUrl string, path string) {
@@ -146,7 +147,7 @@ func doClone(inputUrl string, path string) {
 	utils.Trace("Create directory "+path, true)
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
-		utils.TraceWarn(colorstring.Color("Cannot create path : [red] " + err.Error()))
+		utils.TraceWarn(colorstring.Color("❌ Cannot create path : [red] " + err.Error()))
 	}
 	_, err = git.PlainClone(path, false, &git.CloneOptions{
 		Auth:     &http.BasicAuth{Password: utils.GetToken(hostnameOfRepo, nil)},
@@ -154,6 +155,6 @@ func doClone(inputUrl string, path string) {
 		Progress: nil,
 	})
 	if err != nil {
-		utils.TraceWarn(colorstring.Color("Git clone failed: [red] " + err.Error()))
+		utils.TraceWarn(colorstring.Color("❌ Git clone failed: [red] " + err.Error()))
 	}
 }
