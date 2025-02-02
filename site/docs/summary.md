@@ -1,4 +1,5 @@
 * [🏡 Homepage](index.md)
+* [🛠️ Configuration](config.md)
 * [🚩 Global flags](flags.md)
     * [🪡 Config file](flags/#config-file-config-file-or-f)
     * [📝 Log file](flags/#log-directory-log-dir-or-l)
