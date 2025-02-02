@@ -11,7 +11,7 @@ Type "heimdall git-clone -i https://github.com/yodamad/heimdall"
 Sleep 500ms
 Enter
 Sleep 2s
-Type "eza -l -a -T -L 3 /Users/yodamad/work/demo"
+Type "eza -l -a -T -L 2 /Users/yodamad/work/demo"
 Sleep 500ms
 Enter
 Sleep 4s
