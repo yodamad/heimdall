@@ -13,8 +13,10 @@ var DefaultConfFolderFunc = func() string {
 	home, _ := os.UserConfigDir()
 	if runtime.GOOS == "darwin" {
 		home = os.Getenv("HOME")
+		return home + "/.heimdall/"
+	} else {
+		return home + "/heimdall/"
 	}
-	return home + "/.heimdall/"
 }
 
 // DefaultConfFolder DefaultFolder /* Default folder for git-info search */
