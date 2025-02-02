@@ -10,7 +10,7 @@ Several options are available to customize the created path and [global flags](f
 
 ## Available options
 
-![Options](./assets/heimdall-git-clone.gif)
+![Options](./assets/heimdall-git-clone-help.gif)
 
 ### Clone a group: `--clone-group` or `g`
 

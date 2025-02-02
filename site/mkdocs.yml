@@ -50,3 +50,6 @@ theme:
 
 extra_css:
   - assets/style.css
+
+exclude_docs: |
+  vhs/
