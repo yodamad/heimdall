@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/yodamad/heimdall/cmd"
 	"github.com/yodamad/heimdall/commons"
 	"github.com/yodamad/heimdall/utils"
-	"os"
 )
 
 var rootCmd = &cobra.Command{
@@ -34,7 +35,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&commons.WorkDir, "work-dir", "w", commons.DefaultWorkDir, "work directory")
 	rootCmd.PersistentFlags().StringVarP(&commons.InputConfigFile, "config-file", "c", commons.InputConfigFile, "config file")
 
-	// Init .heimdall folder
+	// Create directory for configuration
 	_, err := os.Stat(commons.DefaultConfFolder)
 	if os.IsNotExist(err) {
 		err := os.Mkdir(commons.DefaultConfFolder, os.ModePerm)
@@ -49,7 +50,7 @@ func init() {
 	})
 	// Output to stdout instead of the default stderr
 	// Can be any io.Writer, see below for File example
-	f, _ := os.OpenFile(commons.DefaultLogFolder+"heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	f, _ := os.OpenFile(commons.DefaultLogFolder+"/heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	log.SetOutput(f)
 
 	// Only log the warning severity or above.
