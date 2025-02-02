@@ -2,11 +2,12 @@ package utils
 
 import (
 	"fmt"
+	"os"
+	"regexp"
+
 	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/yodamad/heimdall/commons"
-	"os"
-	"regexp"
 )
 
 func Trace(msg string, isDebug bool) {
@@ -31,9 +32,9 @@ func OverrideLogFile() {
 		os.RemoveAll("heimdall.log")
 		f, _ := os.OpenFile(commons.LogDir+"/heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		log.SetOutput(f)
-		Trace(colorstring.Color("📝 Log file written in [light_blue]"+commons.LogDir), false)
+		Trace(colorstring.Color("📝 Log file written in [light_blue]"+commons.LogDir+"/heimdall.log"), false)
 	} else {
-		Trace(colorstring.Color("📝 Log file written in [light_blue]"+commons.DefaultLogFolder), false)
+		Trace(colorstring.Color("📝 Log file written in [light_blue]"+commons.DefaultLogFolder+"/heimdall.log"), false)
 	}
 }
 
