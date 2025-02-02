@@ -9,7 +9,7 @@ Some options are available and described in this page. But there are also [globa
 
 ## Available options
 
-![Options](./assets/heimdall-git-info.gif)
+![Options](./assets/heimdall-git-info-help.gif)
 
 ### Search depth: `--depth` or `-d`
 
