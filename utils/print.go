@@ -102,10 +102,18 @@ func visualDisplayRepo(repo string) string {
 }
 
 func visualDisplayBool(status bool) string {
-	if status {
-		return "🔴"
+	if commons.NoColor {
+		if status {
+			return "KO"
+		} else {
+			return "OK"
+		}
 	} else {
-		return "🟢"
+		if status {
+			return "🔴"
+		} else {
+			return "🟢"
+		}
 	}
 }
 
