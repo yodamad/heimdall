@@ -32,8 +32,10 @@ var DefaultLogDirFunc = func() string {
 	home, _ := os.UserCacheDir()
 	if runtime.GOOS == "darwin" {
 		home = DefaultConfFolder
+		return home
+	} else {
+		return home + "/heimdall/"
 	}
-	return home
 }
 
 // DefaultWorkDir /* Default work folder */
