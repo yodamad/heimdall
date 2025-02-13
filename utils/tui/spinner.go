@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mitchellh/colorstring"
+	"github.com/yodamad/heimdall/commons"
 )
 
 var (
@@ -36,9 +37,17 @@ func (m SpinnerModel) Update(msg2 tea.Msg) (tea.Model, tea.Cmd) {
 		m.Spinner, cmd = m.Spinner.Update(msg)
 		return m, cmd
 	case PrintMessage:
-		m.Warns = append(m.Warns, colorstring.Color("[light_yellow]Cannot fetch "+msg2.(PrintMessage).Path+". Skip it...[default]"))
+		if commons.NoColor {
+			m.Warns = append(m.Warns, "Cannot fetch "+msg2.(PrintMessage).Path+". Skip it...")
+		} else {
+			m.Warns = append(m.Warns, colorstring.Color("[light_yellow]Cannot fetch "+msg2.(PrintMessage).Path+". Skip it...[default]"))
+		}
 	case ErrorMessage:
-		m.Warns = append(m.Warns, colorstring.Color("[red]Error "+msg2.(ErrorMessage).Error+"[default]"))
+		if commons.NoColor {
+			m.Warns = append(m.Warns, "Error "+msg2.(ErrorMessage).Error)
+		} else {
+			m.Warns = append(m.Warns, colorstring.Color("[red]Error "+msg2.(ErrorMessage).Error+"[default]"))
+		}
 	case InfoMessage:
 		m.Warns = append(m.Warns, msg2.(InfoMessage).Message)
 	}

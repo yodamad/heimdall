@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/mitchellh/colorstring"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/spf13/cobra"
@@ -54,9 +53,9 @@ func printInfo() {
 }
 
 func header(value string) string {
-	return colorstring.Color("[bold][yellow]" + value + "[default]")
+	return utils.ColorString("[bold][yellow]" + value + "[default]")
 }
 
 func colorValue(value string) string {
-	return colorstring.Color("[blue]" + value)
+	return utils.ColorString("[blue]" + value)
 }

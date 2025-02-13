@@ -6,7 +6,6 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/go-github/v68/github"
-	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/yodamad/heimdall/commons"
@@ -42,7 +41,7 @@ var GitClone = &cobra.Command{
 			log.SetLevel(log.DebugLevel)
 		}
 		if keepSuffix && !hostname {
-			utils.TraceWarn(colorstring.Color("[bold]keep-suffix[reset][light_yellow] option is ignored because [bold]host[reset][light_yellow] option is not enabled"))
+			utils.TraceWarn(utils.ColorString("[bold]keep-suffix[reset][light_yellow] option is ignored because [bold]host[reset][light_yellow] option is not enabled"))
 		}
 		if !strings.HasSuffix(commons.WorkDir, "/") {
 			commons.WorkDir += "/"
@@ -79,7 +78,7 @@ func cloneGitlabGroup(groupUrl string) {
 	hostnameOfRepo := parsedUrl.Hostname()
 	groupPath := parsedUrl.Path
 
-	utils.Trace(colorstring.Color("[light_blue] Listing projects in [yellow]GitLab[light_blue] group [cyan]"+groupPath), false)
+	utils.Trace(utils.ColorString("[light_blue] Listing projects in [yellow]GitLab[light_blue] group [cyan]"+groupPath), false)
 
 	gitlabClient, err := gitlab.NewClient(utils.GetToken(hostnameOfRepo, nil))
 	if err != nil {
@@ -92,7 +91,7 @@ func cloneGitlabGroup(groupUrl string) {
 		IncludeSubGroups: gitlab.Ptr(true),
 	})
 	if err != nil {
-		utils.TraceWarn(colorstring.Color("Cannot retrieve projects from group : [red]" + err.Error()))
+		utils.TraceWarn(utils.ColorString("Cannot retrieve projects from group : [red]" + err.Error()))
 	}
 
 	for _, project := range projects {
@@ -106,14 +105,14 @@ func cloneGithubGroup(orgUrl string) {
 	hostnameOfOrg := parsedUrl.Hostname()
 	orgPath := parsedUrl.Path
 
-	utils.Trace(colorstring.Color("[light_blue] Listing projects in [yellow]GitHub[light_blue] organization [cyan]"+orgUrl), false)
+	utils.Trace(utils.ColorString("[light_blue] Listing projects in [yellow]GitHub[light_blue] organization [cyan]"+orgUrl), false)
 
 	token := utils.GetToken(hostnameOfOrg, nil)
 	githubClient := github.NewClient(nil).WithAuthToken(token)
 	cleanUrl := strings.TrimSuffix(strings.TrimPrefix(orgPath, "/"), "/")
 	repos, _, err := githubClient.Repositories.ListByOrg(context.Background(), cleanUrl, &github.RepositoryListByOrgOptions{})
 	if err != nil {
-		utils.TraceWarn(colorstring.Color("Cannot retrieve projects from group : [red]" + err.Error()))
+		utils.TraceWarn(utils.ColorString("Cannot retrieve projects from group : [red]" + err.Error()))
 	}
 	for _, project := range repos {
 		projectUrl := project.GetCloneURL()
@@ -122,7 +121,7 @@ func cloneGithubGroup(orgUrl string) {
 }
 
 func cloneRepo(inputUrl string) {
-	utils.Trace(colorstring.Color("[light_blue]🧬 Cloning [cyan]"+inputUrl+"..."), false)
+	utils.Trace(utils.ColorString("[light_blue]🧬 Cloning [cyan]"+inputUrl+"..."), false)
 
 	parsedUrl, _ := url.Parse(inputUrl)
 	hostnameOfRepo := parsedUrl.Hostname()
@@ -137,7 +136,7 @@ func cloneRepo(inputUrl string) {
 	} else {
 		doClone(inputUrl, commons.WorkDir+pathToRepo)
 	}
-	utils.Trace(colorstring.Color("[light_blue]✅ [cyan]"+inputUrl+"[light_blue] cloned"), false)
+	utils.Trace(utils.ColorString("[light_blue]✅ [cyan]"+inputUrl+"[light_blue] cloned"), false)
 }
 
 func doClone(inputUrl string, path string) {
@@ -147,7 +146,7 @@ func doClone(inputUrl string, path string) {
 	utils.Trace("Create directory "+path, true)
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
-		utils.TraceWarn(colorstring.Color("❌ Cannot create path : [red] " + err.Error()))
+		utils.TraceWarn(utils.ColorString("❌ Cannot create path : [red] " + err.Error()))
 	}
 	_, err = git.PlainClone(path, false, &git.CloneOptions{
 		Auth:     &http.BasicAuth{Password: utils.GetToken(hostnameOfRepo, nil)},
@@ -155,6 +154,6 @@ func doClone(inputUrl string, path string) {
 		Progress: nil,
 	})
 	if err != nil {
-		utils.TraceWarn(colorstring.Color("❌ Git clone failed: [red] " + err.Error()))
+		utils.TraceWarn(utils.ColorString("❌ Git clone failed: [red] " + err.Error()))
 	}
 }

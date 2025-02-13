@@ -4,6 +4,7 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mitchellh/colorstring"
+	"github.com/yodamad/heimdall/commons"
 )
 
 type ChoiceModel struct {
@@ -14,8 +15,11 @@ type ChoiceModel struct {
 }
 
 func InitialChoiceModel(title string, choices []string) ChoiceModel {
+	if !commons.NoColor {
+		title = TitleColor + title + ":[default]"
+	}
 	return ChoiceModel{
-		title: colorstring.Color(TitleColor + title + ":[default]"),
+		title: colorstring.Color(title),
 		// Our to-do list is a grocery list
 		choices: choices,
 

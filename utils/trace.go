@@ -15,16 +15,21 @@ func Trace(msg string, isDebug bool) {
 		if commons.Verbose {
 			fmt.Println(msg)
 		}
-		log.Debug(cleanForLog(msg))
+		log.Debug(CleanForLog(msg))
 	} else {
 		fmt.Println(msg)
-		log.Info(cleanForLog(msg))
+		log.Info(CleanForLog(msg))
 	}
 }
 
 func TraceWarn(msg string) {
-	fmt.Println(colorstring.Color("[light_yellow]⚠ " + msg + "[default]"))
-	log.Info(cleanForLog(msg))
+	if commons.NoColor {
+		msg = CleanForLog(msg)
+		fmt.Println("⚠ " + msg)
+	} else {
+		fmt.Println(ColorString("[light_yellow]⚠ " + msg + "[default]"))
+	}
+	log.Info(CleanForLog(msg))
 }
 
 func OverrideLogFile() {
@@ -32,9 +37,9 @@ func OverrideLogFile() {
 		os.RemoveAll("heimdall.log")
 		f, _ := os.OpenFile(commons.LogDir+"/heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		log.SetOutput(f)
-		Trace(colorstring.Color("📝 Log file written in [light_blue]"+commons.LogDir+"/heimdall.log"), false)
+		Trace(ColorString("📝 Log file written in [light_blue]"+commons.LogDir+"/heimdall.log"), false)
 	} else {
-		Trace(colorstring.Color("📝 Log file written in [light_blue]"+commons.DefaultLogFolder+"heimdall.log"), false)
+		Trace(ColorString("📝 Log file written in [light_blue]"+commons.DefaultLogFolder+"heimdall.log"), false)
 	}
 }
 
@@ -43,6 +48,14 @@ const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)
 
 var re = regexp.MustCompile(ansi)
 
-func cleanForLog(str string) string {
+func CleanForLog(str string) string {
 	return re.ReplaceAllString(str, "")
+}
+
+func ColorString(str string) string {
+	msg := colorstring.Color(str)
+	if commons.NoColor {
+		return CleanForLog(msg)
+	}
+	return msg
 }

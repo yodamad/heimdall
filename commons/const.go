@@ -2,11 +2,10 @@ package commons
 
 import (
 	"fmt"
-	"os"
-	"runtime"
-
 	"github.com/mitchellh/colorstring"
 	"github.com/yodamad/heimdall/build"
+	"os"
+	"runtime"
 )
 
 var DefaultConfFolderFunc = func() string {
@@ -64,6 +63,9 @@ var Verbose bool
 
 // Interactive /* Interactive mode */
 var Interactive bool
+
+// NoColor /* No color output */
+var NoColor bool
 
 // InputConfigFile /* The config file to use */
 var InputConfigFile = DefaultConfFolder + DefaultConfigFile

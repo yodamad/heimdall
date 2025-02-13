@@ -2,19 +2,25 @@ package utils
 
 import (
 	"fmt"
-	"os"
-	"strings"
-
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
-	"github.com/mitchellh/colorstring"
 	"github.com/yodamad/heimdall/build"
 	"github.com/yodamad/heimdall/cmd/entity"
 	"github.com/yodamad/heimdall/commons"
+	"os"
+	"strings"
 )
 
 func PrintBanner() {
-	fmt.Print(colorstring.Color(
+	if commons.NoColor {
+		PrintBannerWithoutColor()
+	} else {
+		PrintBannerWithColor()
+	}
+}
+
+func PrintBannerWithColor() {
+	fmt.Print(ColorString(
 		`[light_blue]            _               _       _ _
   /\  /\___(_)_ __ ___   __| | __ _| | |
  / /_/ / _ \ | '_ ` + "`" + ` _ \ / _` + "`" + ` |/ _` + "`" + ` | | |
@@ -25,10 +31,30 @@ func PrintBanner() {
 	))
 
 	if commons.Verbose {
-		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset] (commit %s), built at %s, compiled with %s\n"),
+		fmt.Printf(ColorString("Version [bold][light_gray]%s[reset] (commit %s), built at %s, compiled with %s\n"),
 			build.BuildInfos.GitVersion, build.BuildInfos.GitCommit[:7], build.BuildInfos.BuildDate, build.BuildInfos.GoVersion)
 	} else {
-		fmt.Printf(colorstring.Color("Version [bold][light_gray]%s[reset]\n"), build.BuildInfos.GitVersion)
+		fmt.Printf(ColorString("Version [bold][light_gray]%s[reset]\n"), build.BuildInfos.GitVersion)
+	}
+
+	fmt.Println("  ")
+}
+
+func PrintBannerWithoutColor() {
+	fmt.Print(
+		`            _               _       _ _
+  /\  /\___(_)_ __ ___   __| | __ _| | |
+ / /_/ / _ \ | '_ ` + "`" + ` _ \ / _` + "`" + ` |/ _` + "`" + ` | | |
+/ __  /  __/ | | | | | | (_| | (_| | | |
+\/ /_/ \___|_|_| |_| |_|\__,_|\__,_|_|_|
+`,
+	)
+
+	if commons.Verbose {
+		fmt.Printf("Version %s (commit %s), built at %s, compiled with %s\n",
+			build.BuildInfos.GitVersion, build.BuildInfos.GitCommit[:7], build.BuildInfos.BuildDate, build.BuildInfos.GoVersion)
+	} else {
+		fmt.Printf("Version %s\n", build.BuildInfos.GitVersion)
 	}
 
 	fmt.Println("  ")
@@ -71,7 +97,7 @@ func PrintTable(gitFolders []entity.GitFolder) {
 
 func visualDisplayRepo(repo string) string {
 	cleanRootDir := strings.TrimPrefix(commons.WorkDir, "./")
-	coloredRepo := strings.Replace(repo, cleanRootDir, colorstring.Color("[dark_gray]"+cleanRootDir+"[default]"), -1)
+	coloredRepo := strings.Replace(repo, cleanRootDir, ColorString("[dark_gray]"+cleanRootDir+"[default]"), -1)
 	return coloredRepo
 }
 

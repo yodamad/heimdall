@@ -7,7 +7,6 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
-	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/yodamad/heimdall/cmd/entity"
@@ -53,23 +52,23 @@ func listGitDirs() {
 	answer := "n"
 
 	for interactiveMode && !strings.EqualFold(answer, "y") {
-		answer = commons.AskQuestion(colorstring.Color("🔍 Search in directory "+tui.PathColor+rootDir+"[default] [light_gray][Y/n][default] : "), "Y")
+		answer = tui.AskQuestion(utils.ColorString("🔍 Search in directory "+tui.PathColor+rootDir+"[default] [light_gray][Y/n][default] : "), "Y")
 		if strings.EqualFold(answer, "n") {
 			if strings.EqualFold(answer, "n") {
-				answer = commons.AskQuestion(colorstring.Color("➡️ Directory to search in : "), rootDir)
+				answer = tui.AskQuestion(utils.ColorString("➡️ Directory to search in : "), rootDir)
 			}
 			rootDir = answer
 		} else if answer == "" {
 			answer = "y"
 		} else if !strings.EqualFold(answer, "y") {
-			fmt.Println(colorstring.Color("[yellow]Unknown option value : [light_gray]" + answer))
+			fmt.Println(utils.ColorString("[yellow]Unknown option value : [light_gray]" + answer))
 			// Reset answer
 			answer = "n"
 		}
 	}
 
 	if !interactiveMode {
-		utils.Trace(colorstring.Color("🔍 Search in directory "+tui.PathColor+rootDir+"[default]"), false)
+		utils.Trace(utils.ColorString("🔍 Search in directory "+tui.PathColor+rootDir+"[default]"), false)
 	}
 
 	// Initialize the spinner
@@ -83,9 +82,9 @@ func listGitDirs() {
 	}
 
 	if rootDir == commons.DefaultWorkDir {
-		m.Text = colorstring.Color("Searching in [bold]default directory[default] : " + tui.PathColor + "'" + rootDir + "'[default]")
+		m.Text = utils.ColorString("Searching in [bold]default directory[default] : " + tui.PathColor + "'" + rootDir + "'[default]")
 	} else {
-		m.Text = colorstring.Color("Searching in " + tui.PathColor + "'" + rootDir + "'[default] ...")
+		m.Text = utils.ColorString("Searching in " + tui.PathColor + "'" + rootDir + "'[default] ...")
 	}
 
 	// Start the spinner
@@ -150,20 +149,20 @@ func checkDir(rootDir string, spinner *tea.Program) tea.Cmd {
 	if nbGitFolders > 0 {
 		utils.PrintTable(gitFolders)
 		if nbSkippedFolders > 0 {
-			utils.Trace(colorstring.Color("Found [green]"+strconv.Itoa(nbGitFolders)+"[default] folder(s) (Skip [yellow]"+strconv.Itoa(nbSkippedFolders)+"[default] folders because of errors, use '-v' to check in details)"), false)
+			utils.Trace(utils.ColorString("Found [green]"+strconv.Itoa(nbGitFolders)+"[default] folder(s) (Skip [yellow]"+strconv.Itoa(nbSkippedFolders)+"[default] folders because of errors, use '-v' to check in details)"), false)
 		} else {
-			utils.Trace(colorstring.Color("Found [green]"+strconv.Itoa(nbGitFolders)+"[default] folder(s)"), false)
+			utils.Trace(utils.ColorString("Found [green]"+strconv.Itoa(nbGitFolders)+"[default] folder(s)"), false)
 		}
 		if commons.Interactive {
 			chooseInteractiveOption(spinner)
 		}
 	} else {
 		if nbSkippedFolders > 0 {
-			utils.Trace(colorstring.Color("😕 [red]No git folder found[default] (Skip [yellow]"+strconv.Itoa(nbSkippedFolders)+"[default] folders because of errors, use '-v' to check in details)"), false)
+			utils.Trace(utils.ColorString("😕 [red]No git folder found[default] (Skip [yellow]"+strconv.Itoa(nbSkippedFolders)+"[default] folders because of errors, use '-v' to check in details)"), false)
 		} else {
-			utils.Trace(colorstring.Color("😕 [red]No git folder found"), false)
+			utils.Trace(utils.ColorString("😕 [red]No git folder found"), false)
 		}
-		utils.Trace(colorstring.Color("🤔 Is "+tui.PathColor+rootDir+"[default] the correct path ?"), false)
+		utils.Trace(utils.ColorString("🤔 Is "+tui.PathColor+rootDir+"[default] the correct path ?"), false)
 	}
 
 	return tea.Quit
@@ -228,7 +227,7 @@ func chooseInteractiveOption(spinner *tea.Program) {
 		choices = append(choices, "📥 Display remote commits of a repository")
 	}
 	if checkIfAtLeastOne(gitFolders, func(folder entity.GitFolder) bool { return entity.CanPull(folder) }) {
-		choices = append(choices, colorstring.Color("🔃 Update one or several repositories ([dim]git pull[reset])"))
+		choices = append(choices, utils.ColorString("🔃 Update one or several repositories ([dim]git pull[reset])"))
 	}
 	choices = append(choices, "✅ I'm done")
 
@@ -249,11 +248,11 @@ func chooseInteractiveOption(spinner *tea.Program) {
 		utils.PrintSeparation()
 		folder := pickSingleItem(gitFolders, func(folder entity.GitFolder) bool { return entity.HasRemoteChanges(folder) })
 		listRemoteChanges(folder)
-	case colorstring.Color("🔃 Update one or several repositories ([dim]git pull[reset])"):
+	case utils.ColorString("🔃 Update one or several repositories ([dim]git pull[reset])"):
 		toUpdate := selectItems(gitFolders, func(folder entity.GitFolder) bool { return entity.CanPull(folder) })
 		utils.PrintSeparation()
 		if len(toUpdate) > 0 {
-			utils.Trace(colorstring.Color(tui.TitleColor+"Pulling repositories :[default]\n"), false)
+			utils.Trace(utils.ColorString(tui.TitleColor+"Pulling repositories :[default]\n"), false)
 		}
 		for _, folder := range toUpdate {
 			gitPull(folder)
@@ -290,7 +289,7 @@ func listLocalChanges(path string, spinner *tea.Program) {
 	w, _ := repo.Worktree()
 	s, _ := w.Status()
 
-	utils.Trace(colorstring.Color("🚦 [dark_gray]"+strconv.Itoa(len(s))+" files"), false)
+	utils.Trace(utils.ColorString("🚦 [dark_gray]"+strconv.Itoa(len(s))+" files"), false)
 	for filename, _ := range s {
 		fileStatus := s.File(filename)
 		fmt.Printf("%s - %s \n", filename, string(fileStatus.Worktree))
@@ -305,7 +304,7 @@ func listRemoteChanges(gitFolder string) {
 
 	fullOutput := string(out)
 
-	utils.Trace(colorstring.Color("🚦 [dark_gray]"+strconv.Itoa(strings.Count(fullOutput, "\n"))+" commits"), false)
+	utils.Trace(utils.ColorString("🚦 [dark_gray]"+strconv.Itoa(strings.Count(fullOutput, "\n"))+" commits"), false)
 	utils.Trace(string(out), false)
 }
 
@@ -340,7 +339,7 @@ func pickSingleItem(items []entity.GitFolder, fn filterFolder) string {
 
 func selectItems(items []entity.GitFolder, fn filterFolder) []entity.GitFolder {
 	utils.PrintSeparation()
-	var q = colorstring.Color(tui.TitleColor + "Pick repositories to update:[default]")
+	var q = utils.ColorString(tui.TitleColor + "Pick repositories to update:[default]")
 
 	var filteredItems []entity.GitFolder
 	for _, item := range items {
@@ -405,7 +404,7 @@ func gitPull(folder entity.GitFolder) {
 	worktree, _ := repo.Worktree()
 	err := worktree.Pull(&git.PullOptions{RemoteName: "origin"})
 	if err != nil {
-		utils.TraceWarn(colorstring.Color("Cannot pull : [red]" + err.Error()))
+		utils.TraceWarn(utils.ColorString("Cannot pull : [red]" + err.Error()))
 	}
-	utils.Trace(colorstring.Color("✅ [bold]"+folder.Path+"[reset] pulled"), false)
+	utils.Trace(utils.ColorString("✅ [bold]"+folder.Path+"[reset] pulled"), false)
 }

@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mitchellh/colorstring"
 	"github.com/spf13/viper"
 	"github.com/yodamad/heimdall/commons"
 	"github.com/yodamad/heimdall/utils/tui"
@@ -23,7 +22,7 @@ var ConfiguredPlatforms = make(map[string]Platform)
 func HasInputConfig() bool {
 	_, err := os.Stat(commons.InputConfigFile)
 	if err != nil {
-		fmt.Println(colorstring.Color("[light_yellow]Cannot read input config file : [red]" + commons.InputConfigFile + "[light_yellow] Ignore it..."))
+		fmt.Println(ColorString("[light_yellow]Cannot read input config file : [red]" + commons.InputConfigFile + "[light_yellow] Ignore it..."))
 		fmt.Println("")
 	}
 	return commons.InputConfigFile != "" && err == nil
@@ -36,13 +35,13 @@ func UseConfig() {
 		err := viper.ReadInConfig()
 		BuildPlatforms()
 		if err != nil {
-			fmt.Println(colorstring.Color("[light_yellow]Cannot read config in file : [red]"+commons.InputConfigFile) + "[light_yellow] Ignore it...")
+			fmt.Println(ColorString("[light_yellow]Cannot read config in file : [red]"+commons.InputConfigFile) + "[light_yellow] Ignore it...")
 		}
 		if commons.WorkDir == "" || commons.WorkDir == commons.DefaultWorkDir {
 			workDir := viper.GetString("work_dir")
 			if workDir != "" {
 				if info, err := os.Stat(workDir); err != nil || !info.IsDir() {
-					fmt.Println(colorstring.Color("[light_yellow]The work_dir is not a valid directory: [red]" + workDir))
+					fmt.Println(ColorString("[light_yellow]The work_dir is not a valid directory: [red]" + workDir))
 					commons.WorkDir = commons.DefaultWorkDir
 				} else {
 					commons.WorkDir = workDir
@@ -63,10 +62,10 @@ func BuildPlatforms() {
 		infos := viper.GetStringMap("platforms." + key)
 
 		if infos["type"] == nil {
-			TraceWarn(colorstring.Color("[light_yellow]Platform [blue]" + key + "[light_yellow] is not correctly configured : missing [blue]type[light_yellow] field. Ignoring it..."))
+			TraceWarn(ColorString("[light_yellow]Platform [blue]" + key + "[light_yellow] is not correctly configured : missing [blue]type[light_yellow] field. Ignoring it..."))
 			continue
 		} else if infos["token"] == nil {
-			TraceWarn(colorstring.Color("[light_yellow]Platform [blue]" + key + "[light_yellow] is not correctly configured : missing [blue]token[light_yellow] field. Ignoring it..."))
+			TraceWarn(ColorString("[light_yellow]Platform [blue]" + key + "[light_yellow] is not correctly configured : missing [blue]token[light_yellow] field. Ignoring it..."))
 			continue
 		} else {
 			platform := Platform{
@@ -101,7 +100,7 @@ func GetToken(host string, spinner *tea.Program) string {
 				if spinner != nil {
 					spinner.Send(tui.ErrorMessage{Error: strings.TrimPrefix(rawValue, commons.EnvVariable) + " referenced in config-file is not set"})
 				} else {
-					TraceWarn(colorstring.Color("[light_blue]" + strings.TrimPrefix(rawValue, commons.EnvVariable) + "[yellow] referenced in config-file is not set"))
+					TraceWarn(ColorString("[light_blue]" + strings.TrimPrefix(rawValue, commons.EnvVariable) + "[yellow] referenced in config-file is not set"))
 				}
 				return ""
 			}
@@ -110,7 +109,7 @@ func GetToken(host string, spinner *tea.Program) string {
 			return rawValue
 		}
 	} else {
-		TraceWarn(colorstring.Color("[yellow]" + host + "[light_yellow] is not configured, cannot retrieve a token. Operation may fail"))
+		TraceWarn(ColorString("[yellow]" + host + "[light_yellow] is not configured, cannot retrieve a token. Operation may fail"))
 		return ""
 	}
 }
@@ -119,7 +118,7 @@ func GetPublicKey(host string, spinner *tea.Program) string {
 	if platform, isPresent := ConfiguredPlatforms[host]; isPresent {
 		rawValue := platform.publicKey
 		if rawValue == "" {
-			log := colorstring.Color("⚠️ [yellow]" + host + "[light_yellow] publickey is not configured. Using default one: [light_blue]" + commons.PublickeyPath)
+			log := ColorString("⚠️ [yellow]" + host + "[light_yellow] publickey is not configured. Using default one: [light_blue]" + commons.PublickeyPath)
 			if spinner != nil {
 				spinner.Send(tui.InfoMessage{Message: log})
 			} else {
@@ -127,7 +126,7 @@ func GetPublicKey(host string, spinner *tea.Program) string {
 			}
 			return commons.PublickeyPath
 		} else if _, err := os.Stat(rawValue); err != nil {
-			log := colorstring.Color("⚠️ [light_yellow]Public key [blue]" + rawValue + "[light_yellow] does not exist. Operation may fail")
+			log := ColorString("⚠️ [light_yellow]Public key [blue]" + rawValue + "[light_yellow] does not exist. Operation may fail")
 			if spinner != nil {
 				spinner.Send(tui.ErrorMessage{Error: log})
 			} else {
@@ -137,7 +136,7 @@ func GetPublicKey(host string, spinner *tea.Program) string {
 		}
 		return rawValue
 	} else {
-		log := colorstring.Color("⚠️ [yellow]" + host + "[light_yellow] publickey is not configured. Using default one: [light_blue]" + commons.PublickeyPath)
+		log := ColorString("⚠️ [yellow]" + host + "[light_yellow] publickey is not configured. Using default one: [light_blue]" + commons.PublickeyPath)
 		if spinner != nil {
 			spinner.Send(tui.InfoMessage{Message: log})
 		} else {

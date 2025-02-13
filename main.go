@@ -2,20 +2,18 @@ package main
 
 import (
 	"fmt"
-	"os"
-
-	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/yodamad/heimdall/cmd"
 	"github.com/yodamad/heimdall/commons"
 	"github.com/yodamad/heimdall/utils"
+	"os"
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "heimdall",
-	Short: colorstring.Color("[yellow]Heimdall[default] helps you with your git folders"),
-	Long: colorstring.Color(`
+	Short: utils.ColorString("[yellow]Heimdall[default] helps you with your git folders"),
+	Long: utils.ColorString(`
 [yellow]Heimdall[default] is a CLI tool to help you with your git folders.
 You can check, update, ... everything easily
           `),
@@ -23,7 +21,7 @@ You can check, update, ... everything easily
 	Run: func(cmd *cobra.Command, args []string) {
 		utils.PrintBanner()
 	},
-	Example: colorstring.Color("[light_blue]heimdall -h"),
+	Example: utils.ColorString("[light_blue]heimdall -h"),
 }
 
 func init() {
@@ -34,6 +32,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DefaultLogFolder, "log directory")
 	rootCmd.PersistentFlags().StringVarP(&commons.WorkDir, "work-dir", "w", commons.DefaultWorkDir, "work directory")
 	rootCmd.PersistentFlags().StringVarP(&commons.InputConfigFile, "config-file", "c", commons.InputConfigFile, "config file")
+	rootCmd.PersistentFlags().BoolVarP(&commons.NoColor, "no-color", "n", false, "no color output")
 
 	// Create directory for configuration
 	_, err := os.Stat(commons.DefaultConfFolder)
