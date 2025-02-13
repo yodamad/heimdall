@@ -45,6 +45,16 @@ func init() {
 		}
 	}
 
+	// Create cache directory for logs
+	_, err = os.Stat(commons.DefaultLogFolder)
+	if os.IsNotExist(err) {
+		err := os.Mkdir(commons.DefaultLogFolder, os.ModePerm)
+		if err != nil {
+			fmt.Errorf("Cannot create dir " + err.Error())
+			commons.DefaultLogFolder = os.TempDir()
+		}
+	}
+
 	log.SetFormatter(&log.TextFormatter{
 		DisableLevelTruncation: true,
 	})
