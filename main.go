@@ -22,6 +22,12 @@ You can check, update, ... everything easily
 		utils.PrintBanner()
 	},
 	Example: utils.ColorString("[light_blue]heimdall -h"),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cmd.Help()
+		utils.Trace("", false)
+		utils.Trace(utils.ColorString("🚨 [light_red]Unknown command: [bold][yellow]"+args[0]), false)
+		return nil
+	},
 }
 
 func init() {
