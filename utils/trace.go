@@ -34,7 +34,7 @@ func OverrideLogFile() {
 		log.SetOutput(f)
 		Trace(colorstring.Color("📝 Log file written in [light_blue]"+commons.LogDir+"/heimdall.log"), false)
 	} else {
-		Trace(colorstring.Color("📝 Log file written in [light_blue]"+commons.DefaultLogFolder+"/heimdall.log"), false)
+		Trace(colorstring.Color("📝 Log file written in [light_blue]"+commons.DefaultLogFolder+"heimdall.log"), false)
 	}
 }
 
