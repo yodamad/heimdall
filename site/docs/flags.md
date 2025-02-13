@@ -4,7 +4,7 @@ Heimdall provides global flags available for all commands.
 
 You can display options with `-h` option
 
-![Simple demo](./assets/heimdall-demo.gif)
+![Simple demo](./assets/heimdall-help.gif)
 
 ## Config file : `--config-file` or `-f`
 
@@ -31,3 +31,8 @@ But you can also define it at run time with this option. It will override the po
 ## Verbose mode : `--verbose` or `-v`
 
 By enabling this option, more logs are traced within the log file and in the console output. This helps to debug if you face some problems running Heimdall.
+
+## No color mode : `--no-color` or `-n`
+
+By default, Heimdall will display colored output. 
+If you want to disable this feature, you can use this flag.
