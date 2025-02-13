@@ -20,9 +20,7 @@ func GetBuildInfos() goversion.Info {
 			if Date != "" {
 				i.BuildDate = Date
 			}
-			if Version != "dev" {
-				i.GitVersion = Version
-			}
+			i.GitVersion = Version
 		},
 	)
 }
