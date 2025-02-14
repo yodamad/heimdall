@@ -49,6 +49,7 @@ func PrintBannerWithoutColor() {
 \/ /_/ \___|_|_| |_| |_|\__,_|\__,_|_|_|
 `,
 	)
+	fmt.Println()
 
 	if commons.Verbose {
 		fmt.Printf("Version %s (commit %s), built at %s, compiled with %s\n",
