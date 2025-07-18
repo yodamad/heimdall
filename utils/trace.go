@@ -25,9 +25,9 @@ func Trace(msg string, isDebug bool) {
 func TraceWarn(msg string) {
 	if commons.NoColor {
 		msg = CleanForLog(msg)
-		fmt.Println("⚠ " + msg)
+		fmt.Println("⚠  " + msg)
 	} else {
-		fmt.Println(ColorString("[light_yellow]⚠ " + msg + "[default]"))
+		fmt.Println(ColorString("[light_yellow]⚠  " + msg + "[default]"))
 	}
 	log.Info(CleanForLog(msg))
 }
