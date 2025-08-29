@@ -2,6 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-git/go-git/v5"
@@ -13,14 +22,6 @@ import (
 	"github.com/yodamad/heimdall/commons"
 	"github.com/yodamad/heimdall/utils"
 	"github.com/yodamad/heimdall/utils/tui"
-	"io/fs"
-	"net/url"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
 )
 
 var searchDepth = commons.MaxDepth
@@ -365,7 +366,15 @@ func selectItems(items []entity.GitFolder, fn filterFolder) []entity.GitFolder {
 func gitFetch(repo *git.Repository, spinner *tea.Program) (string, error) {
 	connectionType := ""
 	fetchOptions := &git.FetchOptions{}
-	remote, _ := repo.Remote(commons.RemoteName)
+	remote, err := repo.Remote(commons.RemoteName)
+	if err != nil {
+		if commons.Verbose && spinner != nil {
+			spinner.Send(tui.ErrorMessage{Error: err.Error()})
+		} else {
+			utils.TraceWarn("Cannot get remote : " + err.Error())
+		}
+		return "", err
+	}
 	origin := remote.Config().URLs[0]
 	if strings.Contains(origin, "@") {
 		connectionType = "SSH"
