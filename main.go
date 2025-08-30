@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/yodamad/heimdall/cmd"
 	"github.com/yodamad/heimdall/commons"
 	"github.com/yodamad/heimdall/utils"
-	"os"
 )
 
 var rootCmd = &cobra.Command{
@@ -34,6 +35,7 @@ func init() {
 	rootCmd.AddCommand(cmd.GitInfo)
 	rootCmd.AddCommand(cmd.GitClone)
 	rootCmd.AddCommand(cmd.EnvInfo)
+	rootCmd.AddCommand(cmd.GoodMorning)
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DefaultLogFolder, "log directory")
 	rootCmd.PersistentFlags().StringVarP(&commons.WorkDir, "work-dir", "w", commons.DefaultWorkDir, "work directory")

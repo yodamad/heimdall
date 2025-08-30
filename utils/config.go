@@ -2,12 +2,13 @@ package utils
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/viper"
 	"github.com/yodamad/heimdall/commons"
 	"github.com/yodamad/heimdall/utils/tui"
-	"os"
-	"strings"
 )
 
 type Platform struct {
@@ -17,7 +18,14 @@ type Platform struct {
 	publicKeyPassword string
 }
 
+type MorningRoutine struct {
+	Cmds                 []string
+	Shell                string
+	initialized, ohmyzsh bool
+}
+
 var ConfiguredPlatforms = make(map[string]Platform)
+var MorningRoutineConfig MorningRoutine
 
 func HasInputConfig() bool {
 	_, err := os.Stat(commons.InputConfigFile)
@@ -34,24 +42,55 @@ func UseConfig() {
 		viper.SetConfigType("yaml")
 		err := viper.ReadInConfig()
 		BuildPlatforms()
+		BuildMorningRoutine()
 		if err != nil {
 			fmt.Println(ColorString("[light_yellow]Cannot read config in file : [red]"+commons.InputConfigFile) + "[light_yellow] Ignore it...")
 		}
-		if commons.WorkDir == "" || commons.WorkDir == commons.DefaultWorkDir {
-			workDir := viper.GetString("work_dir")
-			if workDir != "" {
-				if info, err := os.Stat(workDir); err != nil || !info.IsDir() {
-					fmt.Println(ColorString("[light_yellow]The work_dir is not a valid directory: [red]" + workDir))
-					commons.WorkDir = commons.DefaultWorkDir
-				} else {
-					commons.WorkDir = workDir
-				}
-			}
-		}
+		SetWorkDir()
 	}
 	if !strings.HasSuffix(commons.WorkDir, "/") {
 		commons.WorkDir += "/"
 	}
+}
+
+func SetWorkDir() {
+	if commons.WorkDir == "" || commons.WorkDir == commons.DefaultWorkDir {
+		workDir := viper.GetString("work_dir")
+		if workDir != "" {
+			if info, err := os.Stat(workDir); err != nil || !info.IsDir() {
+				fmt.Println(ColorString("[light_yellow]The work_dir is not a valid directory: [red]" + workDir))
+				commons.WorkDir = commons.DefaultWorkDir
+			} else {
+				commons.WorkDir = workDir
+			}
+		}
+	}
+}
+
+func BuildMorningRoutine() MorningRoutine {
+	if MorningRoutineConfig.initialized {
+		return MorningRoutineConfig
+	}
+	MorningRoutineConfig := MorningRoutine{
+		Cmds:    []string{},
+		Shell:   "bash",
+		ohmyzsh: false,
+	}
+	if viper.IsSet("morning_routine.shell") {
+		MorningRoutineConfig.Shell = viper.GetString("morning_routine.shell")
+	}
+	if viper.IsSet("morning_routine.ohmyzsh") {
+		MorningRoutineConfig.ohmyzsh = viper.GetBool("morning_routine.ohmyzsh")
+	}
+	if viper.IsSet("morning_routine.commands") {
+		MorningRoutineConfig.Cmds = strings.Split(strings.TrimSpace(viper.GetString("morning_routine.commands")), ",")
+	}
+	MorningRoutineConfig.initialized = true
+	return MorningRoutineConfig
+}
+
+func GetMorningRoutine() MorningRoutine {
+	return BuildMorningRoutine()
 }
 
 func BuildPlatforms() {

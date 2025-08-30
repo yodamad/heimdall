@@ -2,9 +2,10 @@ package tui
 
 import (
 	"fmt"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mitchellh/colorstring"
-	"github.com/yodamad/heimdall/cmd/entity"
+	"github.com/yodamad/heimdall/entity"
 )
 
 type MenuModel struct {

@@ -2,13 +2,15 @@ package utils
 
 import (
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/yodamad/heimdall/build"
-	"github.com/yodamad/heimdall/cmd/entity"
 	"github.com/yodamad/heimdall/commons"
-	"os"
-	"strings"
+	"github.com/yodamad/heimdall/entity"
 )
 
 func PrintBanner() {
@@ -63,6 +65,67 @@ func PrintBannerWithoutColor() {
 
 func PrintSeparation() {
 	fmt.Println("...")
+}
+
+func PrintSimpleTable(gitFolders []entity.GitFolder) {
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Path"})
+	for _, gf := range gitFolders {
+		t.AppendRows([]table.Row{
+			{visualDisplayRepo(gf.Path)},
+		})
+		t.AppendSeparator()
+	}
+	t.SetColumnConfigs([]table.ColumnConfig{
+		{
+			Name:  "Branch",
+			Align: text.AlignCenter,
+		},
+	})
+	t.Render()
+}
+
+func PrintMorningTable(gitFolders []entity.GitFolderWithCmdInfos) {
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+
+	row := table.Row{}
+	colsConfig := []table.ColumnConfig{}
+	row = append(row, "Path")
+	colsConfig = append(colsConfig, table.ColumnConfig{
+		Name:  "Path",
+		Align: text.AlignLeft,
+	})
+	for _, cmd := range GetMorningRoutine().Cmds {
+		row = append(row, cmd)
+		colsConfig = append(colsConfig, table.ColumnConfig{
+			Name:     cmd,
+			Align:    text.AlignCenter,
+			WidthMin: len(cmd),
+		})
+	}
+	t.SetColumnConfigs(colsConfig)
+
+	t.AppendHeader(row)
+	for _, gf := range gitFolders {
+		var values table.Row
+		values = append(values, visualDisplayRepo(gf.Path))
+		for _, cmdInfo := range gf.Cmds {
+			values = append(values, codeDisplay(cmdInfo.ExitCode))
+		}
+		t.AppendRows([]table.Row{values})
+		t.AppendSeparator()
+	}
+
+	t.Render()
+}
+
+func codeDisplay(code int) string {
+	if code != 0 {
+		return "❌ (" + strconv.Itoa(code) + ")"
+	}
+	return "✅"
 }
 
 func PrintTable(gitFolders []entity.GitFolder) {

@@ -11,6 +11,16 @@ type GitFolder struct {
 	ConnectionType       string
 }
 
+type CmdInfo struct {
+	Cmd      string
+	ExitCode int
+}
+
+type GitFolderWithCmdInfos struct {
+	GitFolder
+	Cmds []CmdInfo
+}
+
 func HasRemoteChanges(gitFolder GitFolder) bool {
 	return len(gitFolder.RemoteChanges) > 0 && strings.TrimSuffix(gitFolder.RemoteChanges, "\n") != "0"
 }

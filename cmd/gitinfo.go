@@ -18,8 +18,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/yodamad/heimdall/cmd/entity"
 	"github.com/yodamad/heimdall/commons"
+	"github.com/yodamad/heimdall/entity"
 	"github.com/yodamad/heimdall/utils"
 	"github.com/yodamad/heimdall/utils/tui"
 )
