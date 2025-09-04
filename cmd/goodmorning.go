@@ -13,6 +13,10 @@ import (
 	"github.com/yodamad/heimdall/utils/tui"
 )
 
+var forceCmd bool
+
+// GoodMorningCmd represents the good-morning command
+
 var GoodMorning = &cobra.Command{
 	Use:     "good-morning",
 	Aliases: []string{"gm"},
@@ -30,6 +34,7 @@ var GoodMorning = &cobra.Command{
 
 func init() {
 	GoodMorning.Flags().IntVarP(&searchDepth, "depth", "d", commons.MaxDepth, "search depth")
+	GoodMorning.Flags().BoolVarP(&forceCmd, "force", "f", false, "Don\\'t ask for confirmation before executino commands")
 }
 
 func WakeUp() {
@@ -42,6 +47,16 @@ func WakeUp() {
 	} else {
 		utils.Trace(utils.ColorString("😕 [red]No git folder found"), false)
 		utils.Trace(utils.ColorString("🤔 Is "+tui.PathColor+rootDir+"[default] the correct path ?"), false)
+	}
+
+	if !forceCmd {
+		utils.PrintSeparation()
+		answer := tui.AskQuestion(utils.ColorString("☕️ Run your morning routine on these [green]"+strconv.Itoa(len(gitFoldersFound))+"[default] folders ? [light_gray][Y/n][default] : "), "Y")
+		if answer != "y" && answer != "Y" {
+			utils.Trace(utils.ColorString("❌ [red]Abort, see you tomorrow..."), false)
+			return
+		}
+		utils.PrintSeparation()
 	}
 
 	// Initialize the spinner
