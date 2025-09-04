@@ -73,7 +73,7 @@ func PrintSimpleTable(gitFolders []entity.GitFolder) {
 	t.AppendHeader(table.Row{"Path"})
 	for _, gf := range gitFolders {
 		t.AppendRows([]table.Row{
-			{visualDisplayRepo(gf.Path)},
+			{VisualDisplayRepo(gf.Path)},
 		})
 		t.AppendSeparator()
 	}
@@ -110,7 +110,7 @@ func PrintMorningTable(gitFolders []entity.GitFolderWithCmdInfos) {
 	t.AppendHeader(row)
 	for _, gf := range gitFolders {
 		var values table.Row
-		values = append(values, visualDisplayRepo(gf.Path))
+		values = append(values, VisualDisplayRepo(gf.Path))
 		for _, cmdInfo := range gf.Cmds {
 			values = append(values, codeDisplay(cmdInfo.ExitCode))
 		}
@@ -134,7 +134,7 @@ func PrintTable(gitFolders []entity.GitFolder) {
 	t.AppendHeader(table.Row{"Path", "Branch", "Connection Type", "Local_Changes", "Remote_Changes"})
 	for _, gf := range gitFolders {
 		t.AppendRows([]table.Row{
-			{visualDisplayRepo(gf.Path), gf.CurrentBranch, gf.ConnectionType, visualDisplayBool(gf.HasLocalChanges), displayRemoteChanges(gf.RemoteChanges)},
+			{VisualDisplayRepo(gf.Path), gf.CurrentBranch, gf.ConnectionType, visualDisplayBool(gf.HasLocalChanges), displayRemoteChanges(gf.RemoteChanges)},
 		})
 		t.AppendSeparator()
 	}
@@ -159,7 +159,7 @@ func PrintTable(gitFolders []entity.GitFolder) {
 	t.Render()
 }
 
-func visualDisplayRepo(repo string) string {
+func VisualDisplayRepo(repo string) string {
 	cleanRootDir := strings.TrimPrefix(commons.WorkDir, "./")
 	coloredRepo := strings.Replace(repo, cleanRootDir, ColorString("[dark_gray]"+cleanRootDir+"[default]"), -1)
 	return coloredRepo

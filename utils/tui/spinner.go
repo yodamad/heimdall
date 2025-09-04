@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -36,6 +37,8 @@ func (m SpinnerModel) Update(msg2 tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.Spinner, cmd = m.Spinner.Update(msg)
 		return m, cmd
+	case UpdateMessage:
+		m.Text = msg2.(UpdateMessage).Message
 	case PrintMessage:
 		if commons.NoColor {
 			m.Warns = append(m.Warns, "Cannot fetch "+msg2.(PrintMessage).Path+". Skip it...")
@@ -72,6 +75,10 @@ type ErrorMessage struct {
 }
 
 type InfoMessage struct {
+	Message string
+}
+
+type UpdateMessage struct {
 	Message string
 }
 

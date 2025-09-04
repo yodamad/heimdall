@@ -15,6 +15,8 @@ import (
 
 var forceCmd bool
 
+type setSpinnerMsg string
+
 // GoodMorningCmd represents the good-morning command
 
 var GoodMorning = &cobra.Command{
@@ -79,6 +81,8 @@ func WakeUp() {
 	updatedFolders := make([]entity.GitFolderWithCmdInfos, 0)
 	for _, gf := range gitFoldersFound {
 
+		prg.Send(tui.UpdateMessage{Message: "☀️ Good Morning " + utils.VisualDisplayRepo(gf.Path)})
+		// Execute commands
 		updatedFolder := entity.GitFolderWithCmdInfos{
 			GitFolder: gf,
 		}
@@ -87,6 +91,11 @@ func WakeUp() {
 		}
 		updatedFolders = append(updatedFolders, updatedFolder)
 	}
+	prg.Send(tui.UpdateMessage{Message: "☕️ All done !"})
 	prg.Quit()
+	utils.PrintSeparation()
 	utils.PrintMorningTable(updatedFolders)
+	utils.PrintSeparation()
+	utils.Trace("☀️ Have a good day !", false)
+	utils.PrintSeparation()
 }
