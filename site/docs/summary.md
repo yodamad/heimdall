@@ -12,4 +12,7 @@
     * [🏘️Clone group](git-clone/#clone-a-group-clone-group-or-g)
     * [🏠Include hostname](git-clone/#include-hostname-include-hostname-or-i)
     * [🎬Include suffix](git-clone/#keep-hostname-suffix-keep-hostname-suffix-or-k)
+* [🌅 Good-morning](good-morning.md)
+    * [🤿 Search depth](good-morning/#search-depth-depth-or-d)
+    * [⚡ Force mode](good-morning/#force-mode-force-or-f)
 * [🌱 Env-info](env-info.md)
