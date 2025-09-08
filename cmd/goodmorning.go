@@ -36,7 +36,7 @@ var GoodMorning = &cobra.Command{
 
 func init() {
 	GoodMorning.Flags().IntVarP(&searchDepth, "depth", "d", commons.MaxDepth, "search depth")
-	GoodMorning.Flags().BoolVarP(&forceCmd, "force", "f", false, "Don\\'t ask for confirmation before executino commands")
+	GoodMorning.Flags().BoolVarP(&forceCmd, "force", "f", false, "Don't ask for confirmation before execution commands")
 }
 
 func WakeUp() {
@@ -50,9 +50,8 @@ func WakeUp() {
 		utils.Trace(utils.ColorString("😕 [red]No git folder found"), false)
 		utils.Trace(utils.ColorString("🤔 Is "+tui.PathColor+rootDir+"[default] the correct path ?"), false)
 	}
-
+	utils.PrintSeparation()
 	if !forceCmd {
-		utils.PrintSeparation()
 		answer := tui.AskQuestion(utils.ColorString("☕️ Run your morning routine on these [green]"+strconv.Itoa(len(gitFoldersFound))+"[default] folders ? [light_gray][Y/n][default] : "), "Y")
 		if answer != "y" && answer != "Y" {
 			utils.Trace(utils.ColorString("❌ [red]Abort, see you tomorrow..."), false)
@@ -74,7 +73,12 @@ func WakeUp() {
 
 	go func() {
 		if _, err := prg.Run(); err != nil {
-			prg.ReleaseTerminal()
+			err := prg.ReleaseTerminal()
+			if err != nil {
+				utils.TraceWarn("Failed release terminal " + err.Error())
+			}
+			utils.Trace("Terminal released", false)
+			return
 		}
 	}()
 
@@ -92,7 +96,9 @@ func WakeUp() {
 		updatedFolders = append(updatedFolders, updatedFolder)
 	}
 	prg.Send(tui.UpdateMessage{Message: "☕️ All done !"})
+	prg.ReleaseTerminal()
 	prg.Quit()
+
 	utils.PrintSeparation()
 	utils.PrintMorningTable(updatedFolders)
 	utils.PrintSeparation()
