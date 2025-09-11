@@ -16,6 +16,7 @@ import (
 
 var forceCmd bool
 var overrideCmds bool
+var newCmds string
 
 // GoodMorningCmd represents the good-morning command
 
@@ -38,6 +39,7 @@ func init() {
 	GoodMorning.Flags().IntVarP(&searchDepth, "depth", "d", commons.MaxDepth, "search depth")
 	GoodMorning.Flags().BoolVarP(&forceCmd, "force", "f", false, "Don't ask for confirmation before execution commands")
 	GoodMorning.Flags().BoolVarP(&overrideCmds, "override-cmds", "o", false, "Override configured commands")
+	GoodMorning.Flags().StringVarP(&newCmds, "run-cmds", "r", "", "New commands to execute (comma separated)")
 }
 
 func WakeUp() {
@@ -58,27 +60,36 @@ func WakeUp() {
 	if len(morningCmds) == 0 || overrideCmds {
 		// Ask for commands
 		var answer string
-		if len(morningCmds) == 0 {
-			answer = tui.AskQuestion("⚠️  No morning routine configured, do you want to configure it now ? [Y/n] : ", "Y")
+		if newCmds != "" {
+			morningCmds = strings.Split(newCmds, ",")
+			for i := range morningCmds {
+				morningCmds[i] = strings.TrimSpace(morningCmds[i])
+			}
+			utils.Trace(utils.ColorString("🏗️  Commands to be executed [dark_gray]"+strings.Join(morningCmds, "[default],[dark_gray]")+"[default]"), false)
+			answer = "n"
 		} else {
-			answer = tui.AskQuestion("⚠️  Do you want to override your morning routine ? [Y/n] : ", "Y")
-		}
+			if len(morningCmds) == 0 {
+				answer = tui.AskQuestion("⚠️  No morning routine configured, do you want to configure it now ? [Y/n] : ", "Y")
+			} else {
+				answer = tui.AskQuestion("⚠️  Do you want to override your morning routine ? [Y/n] : ", "Y")
+			}
 
-		if answer == "y" || answer == "Y" || answer == "" {
-			answer = tui.AskQuestion(utils.ColorString("➡️  Commands to execute [dark_gray](separated by comma)[default]: "), "")
-			if answer != "" {
-				morningCmds = strings.Split(answer, ",")
-				for i := range morningCmds {
-					morningCmds[i] = strings.TrimSpace(morningCmds[i])
+			if answer == "y" || answer == "Y" || answer == "" {
+				answer = tui.AskQuestion(utils.ColorString("➡️  Commands to execute [dark_gray](separated by comma)[default]: "), "")
+				if answer != "" {
+					morningCmds = strings.Split(answer, ",")
+					for i := range morningCmds {
+						morningCmds[i] = strings.TrimSpace(morningCmds[i])
+					}
+					utils.Trace(utils.ColorString("✅ Morning routine configured with [dark_gray]"+strings.Join(morningCmds, "[default],[dark_gray]")+"[default]"), false)
+				} else {
+					utils.Trace(utils.ColorString("❌ [red]Abort, see you tomorrow..."), false)
+					return
 				}
-				utils.Trace(utils.ColorString("✅ Morning routine configured with [dark_gray]"+strings.Join(morningCmds, "[default],[dark_gray]")+"[default]"), false)
 			} else {
 				utils.Trace(utils.ColorString("❌ [red]Abort, see you tomorrow..."), false)
 				return
 			}
-		} else {
-			utils.Trace(utils.ColorString("❌ [red]Abort, see you tomorrow..."), false)
-			return
 		}
 	}
 
