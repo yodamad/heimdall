@@ -15,4 +15,6 @@
 * [🌅 Good-morning](good-morning.md)
     * [🤿 Search depth](good-morning/#search-depth-depth-or-d)
     * [⚡ Force mode](good-morning/#force-mode-force-or-f)
+    * [🔩 Override option](good-morning/#override-option-override-cmds-or-o)
+    * [🏗️ Override commands](good-morning/#override-commands-run-cmds-or-r)
 * [🌱 Env-info](env-info.md)

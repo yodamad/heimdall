@@ -23,7 +23,7 @@ Setting `-f` flag will force the execution
 heimdall good-morning -f
 ```
 
-### Override option: `--override` or `-o`
+### Override option: `--override-cmds` or `-o`
 
 Set this flag to override the default morning routine command dynamically
 
@@ -33,7 +33,7 @@ heimdall good-morning -o
 
 ![Demo -o](./assets/heimdall-good-morning-override.gif)
 
-### Override commands: `run-commands` or `r`
+### Override commands: `--run-cmds` or `r`
 
 *Associated with `-o`*, you can set commands to override default morning routine commands
 
