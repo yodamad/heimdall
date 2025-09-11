@@ -22,3 +22,23 @@ Setting `-f` flag will force the execution
 ```bash
 heimdall good-morning -f
 ```
+
+### Override option: `--override` or `-o`
+
+Set this flag to override the default morning routine command dynamically
+
+```bash
+heimdall good-morning -o
+```
+
+![Demo -o](./assets/heimdall-good-morning-override.gif)
+
+### Override commands: `run-commands` or `r`
+
+*Associated with `-o`*, you can set commands to override default morning routine commands
+
+```bash
+heimdall good-morning -o -r "git status, git pull"
+```
+
+![Demo -o -r](./assets/heimdall-good-morning-override-cmds.gif)
