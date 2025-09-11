@@ -15,8 +15,7 @@ import (
 )
 
 var forceCmd bool
-
-type setSpinnerMsg string
+var overrideCmds bool
 
 // GoodMorningCmd represents the good-morning command
 
@@ -38,6 +37,7 @@ var GoodMorning = &cobra.Command{
 func init() {
 	GoodMorning.Flags().IntVarP(&searchDepth, "depth", "d", commons.MaxDepth, "search depth")
 	GoodMorning.Flags().BoolVarP(&forceCmd, "force", "f", false, "Don't ask for confirmation before execution commands")
+	GoodMorning.Flags().BoolVarP(&overrideCmds, "override-cmds", "o", false, "Override configured commands")
 }
 
 func WakeUp() {
@@ -55,8 +55,15 @@ func WakeUp() {
 
 	morningCmds := utils.GetMorningRoutine().Cmds
 
-	if len(morningCmds) == 0 {
-		answer := tui.AskQuestion("⚠️  No morning routine configured, do you want to configure it now ? [Y/n] : ", "Y")
+	if len(morningCmds) == 0 || overrideCmds {
+		// Ask for commands
+		var answer string
+		if len(morningCmds) == 0 {
+			answer = tui.AskQuestion("⚠️  No morning routine configured, do you want to configure it now ? [Y/n] : ", "Y")
+		} else {
+			answer = tui.AskQuestion("⚠️  Do you want to override your morning routine ? [Y/n] : ", "Y")
+		}
+
 		if answer == "y" || answer == "Y" || answer == "" {
 			answer = tui.AskQuestion(utils.ColorString("➡️  Commands to execute [dark_gray](separated by comma)[default]: "), "")
 			if answer != "" {

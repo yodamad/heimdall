@@ -91,18 +91,18 @@ func PrintMorningTable(gitFolders []entity.GitFolderWithCmdInfos) {
 	t.SetOutputMirror(os.Stdout)
 
 	row := table.Row{}
-	colsConfig := []table.ColumnConfig{}
+	var colsConfig []table.ColumnConfig
 	row = append(row, "Path")
 	colsConfig = append(colsConfig, table.ColumnConfig{
 		Name:  "Path",
 		Align: text.AlignLeft,
 	})
-	for _, cmd := range GetMorningRoutine().Cmds {
-		row = append(row, cmd)
+	for _, cmd := range gitFolders[0].Cmds {
+		row = append(row, cmd.Cmd)
 		colsConfig = append(colsConfig, table.ColumnConfig{
-			Name:     cmd,
+			Name:     cmd.Cmd,
 			Align:    text.AlignCenter,
-			WidthMin: len(cmd),
+			WidthMin: len(cmd.Cmd),
 		})
 	}
 	t.SetColumnConfigs(colsConfig)
