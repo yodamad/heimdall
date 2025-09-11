@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -51,8 +52,31 @@ func WakeUp() {
 		utils.Trace(utils.ColorString("🤔 Is "+tui.PathColor+rootDir+"[default] the correct path ?"), false)
 	}
 	utils.PrintSeparation()
+
+	morningCmds := utils.GetMorningRoutine().Cmds
+
+	if len(morningCmds) == 0 {
+		answer := tui.AskQuestion("⚠️  No morning routine configured, do you want to configure it now ? [Y/n] : ", "Y")
+		if answer == "y" || answer == "Y" || answer == "" {
+			answer = tui.AskQuestion(utils.ColorString("➡️  Commands to execute [dark_gray](separated by comma)[default]: "), "")
+			if answer != "" {
+				morningCmds = strings.Split(answer, ",")
+				for i := range morningCmds {
+					morningCmds[i] = strings.TrimSpace(morningCmds[i])
+				}
+				utils.Trace(utils.ColorString("✅ Morning routine configured with [dark_gray]"+strings.Join(morningCmds, "[default],[dark_gray]")+"[default]"), false)
+			} else {
+				utils.Trace(utils.ColorString("❌ [red]Abort, see you tomorrow..."), false)
+				return
+			}
+		} else {
+			utils.Trace(utils.ColorString("❌ [red]Abort, see you tomorrow..."), false)
+			return
+		}
+	}
+
 	if !forceCmd {
-		answer := tui.AskQuestion(utils.ColorString("☕️ Run your morning routine on these [green]"+strconv.Itoa(len(gitFoldersFound))+"[default] folders ? [light_gray][Y/n][default] : "), "Y")
+		answer := tui.AskQuestion(utils.ColorString("☕️  Run your morning routine ([dark_gray]"+strings.Join(morningCmds, "[default],[dark_gray]")+"[default]) on these [green]"+strconv.Itoa(len(gitFoldersFound))+"[default] folders ? [light_gray][Y/n][default] : "), "Y")
 		if answer != "y" && answer != "Y" {
 			utils.Trace(utils.ColorString("❌ [red]Abort, see you tomorrow..."), false)
 			return
@@ -90,14 +114,16 @@ func WakeUp() {
 		updatedFolder := entity.GitFolderWithCmdInfos{
 			GitFolder: gf,
 		}
-		for _, cmd := range utils.GetMorningRoutine().Cmds {
+		for _, cmd := range morningCmds {
 			updatedFolder.Cmds = append(updatedFolder.Cmds, utils.ExecCmd(cmd, gf))
 		}
 		updatedFolders = append(updatedFolders, updatedFolder)
 	}
 	prg.Send(tui.UpdateMessage{Message: "☕️ All done !"})
-	prg.ReleaseTerminal()
-	prg.Quit()
+	err := prg.ReleaseTerminal()
+	if err != nil {
+		utils.TraceWarn("Failed release terminal " + err.Error())
+	}
 
 	utils.PrintSeparation()
 	utils.PrintMorningTable(updatedFolders)
