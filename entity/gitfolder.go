@@ -9,11 +9,16 @@ type GitFolder struct {
 	DetailedLocalChanges string
 	RemoteChanges        string
 	ConnectionType       string
+	RemoteURL            string
+	Ahead                int
+	ChangedFiles         []string
+	Err                  string
 }
 
 type CmdInfo struct {
 	Cmd      string
 	ExitCode int
+	Output   string
 }
 
 type GitFolderWithCmdInfos struct {

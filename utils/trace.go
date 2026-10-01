@@ -11,6 +11,14 @@ import (
 )
 
 func Trace(msg string, isDebug bool) {
+	if commons.TUIMode {
+		if isDebug {
+			log.Debug(CleanForLog(msg))
+		} else {
+			log.Info(CleanForLog(msg))
+		}
+		return
+	}
 	if isDebug {
 		if commons.Verbose {
 			fmt.Println(msg)
@@ -23,6 +31,10 @@ func Trace(msg string, isDebug bool) {
 }
 
 func TraceWarn(msg string) {
+	if commons.TUIMode {
+		log.Warn(CleanForLog(msg))
+		return
+	}
 	if commons.NoColor {
 		msg = CleanForLog(msg)
 		fmt.Println("⚠  " + msg)

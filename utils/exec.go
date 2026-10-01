@@ -20,9 +20,9 @@ func ExecCmd(cmd string, gf entity.GitFolder) entity.CmdInfo {
 	command.Env = os.Environ()
 	command.Dir = gf.Path
 
-	var out, errb bytes.Buffer
+	var out bytes.Buffer
 	command.Stdout = &out
-	command.Stderr = &errb
+	command.Stderr = &out
 
 	err := command.Run()
 
@@ -44,5 +44,6 @@ func ExecCmd(cmd string, gf entity.GitFolder) entity.CmdInfo {
 	return entity.CmdInfo{
 		Cmd:      cmd,
 		ExitCode: code,
+		Output:   out.String(),
 	}
 }

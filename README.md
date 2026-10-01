@@ -11,6 +11,8 @@ For now, Heimdall has 4 main commands :
 - [Good-morning](https://yodamad.github.io/heimdall/good-morning) to run your morning routine on all your git repositories (like `git pull` or `git status` for example)
 - [Env-info](https://yodamad.github.io/heimdall/env-info) to display useful information about your environment (like kubectl contexts, helm repositories, docker contexts...)
 
+Run without any command, `heimdall` opens a [TUI](https://yodamad.github.io/heimdall/tui) to navigate through your git repositories, see their state and run actions (fetch, pull, morning routine, any command) on one or several of them.
+
 The complete documentation can be found on the dedicated [docsite](https://yodamad.github.io/heimdall/) and here is a quick demo of the interactive mode ⤵️
 
 ![Simple demo](site/docs/assets/heimdall-git-info-demo.gif)
