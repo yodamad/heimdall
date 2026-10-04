@@ -17,8 +17,8 @@ The state of each repository is written in plain words on its right, in a color 
 | Red | Diverged from origin, or the repository can't be read |
 | Orange | Behind origin |
 | Yellow | Local changes |
-| Green | Commits not pushed |
-| Gray | Up to date |
+| Teal | Commits not pushed |
+| Green | Up to date |
 
 !!!info "No network at startup"
     To be displayed quickly, the list is built from local information only, so what it knows about origin dates from the last fetch. When this fetch is more than a day old, the details tell its age : press ++f++ to check origin.

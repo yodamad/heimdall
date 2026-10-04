@@ -24,14 +24,17 @@ const (
 // A fetch older than this is not trusted anymore
 const staleAfter = 24 * time.Hour
 
+// What is secondary, or not known yet
+var dimColor = lipgloss.Color("#6E7B8B")
+
 // The state colors, from warm to cold as urgency decreases. They are used for the state only.
 var stateColors = map[state]lipgloss.Color{
 	stateBroken:  lipgloss.Color("#E5484D"),
 	stateBehind:  lipgloss.Color("#F5A524"),
 	stateDirty:   lipgloss.Color("#E9D66B"),
 	stateAhead:   lipgloss.Color("#5BC8AF"),
-	stateClean:   lipgloss.Color("#6E7B8B"),
-	stateLoading: lipgloss.Color("#6E7B8B"),
+	stateClean:   lipgloss.Color("#6BBF59"),
+	stateLoading: dimColor,
 }
 
 var stateNames = map[state]string{
@@ -44,7 +47,7 @@ var stateNames = map[state]string{
 }
 
 var (
-	dimStyle    = lipgloss.NewStyle().Foreground(stateColors[stateClean])
+	dimStyle    = lipgloss.NewStyle().Foreground(dimColor)
 	okStyle     = lipgloss.NewStyle().Foreground(stateColors[stateAhead])
 	koStyle     = lipgloss.NewStyle().Foreground(stateColors[stateBroken])
 	warnStyle   = lipgloss.NewStyle().Foreground(stateColors[stateBehind])

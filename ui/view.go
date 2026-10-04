@@ -486,6 +486,10 @@ func (m *model) rowLine(r *row, depth int, isCursor bool) string {
 	}
 
 	text, textStyle := stateText(r), lipgloss.NewStyle().Foreground(stateColors[st])
+	// Green is kept for what is known to be up to date
+	if st == stateClean && text != "up to date" {
+		textStyle = dimStyle
+	}
 	switch {
 	case r.busy != "":
 		text, textStyle = busyVerbs[r.busy]+"…", dimStyle
@@ -558,7 +562,7 @@ func verdict(r *row) string {
 	case strings.TrimSpace(r.gf.RemoteChanges) == "":
 		sentences = append(sentences, "Nothing to commit. This branch is not on "+commons.RemoteName+".")
 	default:
-		sentences = append(sentences, "Up to date with "+commons.RemoteName+", nothing to commit.")
+		sentences = append(sentences, lipgloss.NewStyle().Foreground(stateColors[stateClean]).Render("Up to date with "+commons.RemoteName+", nothing to commit."))
 	}
 
 	switch {
@@ -639,7 +643,7 @@ func (m *model) detailContent(r *row) string {
 		}
 	}
 
-	commits := func(title string, nb int, st state, commits []string) {
+	commits := func(title string, nb int, color lipgloss.Color, commits []string) {
 		if len(commits) == 0 {
 			return
 		}
@@ -656,11 +660,11 @@ func (m *model) detailContent(r *row) string {
 			if subjectW < 10 {
 				age, subjectW = "", m.detail.Width-lipgloss.Width(hash)-1
 			}
-			b.WriteString(lipgloss.NewStyle().Foreground(stateColors[st]).Render(hash) + " " + fit(fields[2], subjectW) + "  " + dimStyle.Render(age) + "\n")
+			b.WriteString(lipgloss.NewStyle().Foreground(color).Render(hash) + " " + fit(fields[2], subjectW) + "  " + dimStyle.Render(age) + "\n")
 		}
 	}
-	commits("Incoming", len(r.incoming), stateBehind, r.incoming)
-	commits("Not pushed", len(r.outgoing), stateAhead, r.outgoing)
+	commits("Incoming", len(r.incoming), stateColors[stateBehind], r.incoming)
+	commits("Not pushed", len(r.outgoing), stateColors[stateAhead], r.outgoing)
 
 	// A single branch is the one already told above
 	if len(r.branches) > 1 {
@@ -672,7 +676,7 @@ func (m *model) detailContent(r *row) string {
 		}
 	}
 
-	commits("Last commits", 0, stateClean, r.recent)
+	commits("Last commits", 0, dimColor, r.recent)
 	return b.String()
 }
 
@@ -688,18 +692,18 @@ func (m *model) branchLine(branch entity.Branch, isCursor bool) string {
 		return style.Render(text)
 	}
 
-	text, st := "up to date", stateClean
+	text, color := "up to date", stateColors[stateClean]
 	switch {
 	case branch.Upstream == "":
-		text, st = "not on "+commons.RemoteName, stateAhead
+		text, color = "not on "+commons.RemoteName, stateColors[stateAhead]
 	case branch.Gone:
-		text = "gone from " + commons.RemoteName
+		text, color = "gone from "+commons.RemoteName, dimColor
 	case branch.Ahead > 0 && branch.Behind > 0:
-		text, st = strconv.Itoa(branch.Ahead)+" ahead, "+strconv.Itoa(branch.Behind)+" behind", stateBroken
+		text, color = strconv.Itoa(branch.Ahead)+" ahead, "+strconv.Itoa(branch.Behind)+" behind", stateColors[stateBroken]
 	case branch.Behind > 0:
-		text, st = strconv.Itoa(branch.Behind)+" behind", stateBehind
+		text, color = strconv.Itoa(branch.Behind)+" behind", stateColors[stateBehind]
 	case branch.Ahead > 0:
-		text, st = strconv.Itoa(branch.Ahead)+" ahead", stateAhead
+		text, color = strconv.Itoa(branch.Ahead)+" ahead", stateColors[stateAhead]
 	}
 
 	// As git does, a star marks the branch the repository is on
@@ -715,7 +719,7 @@ func (m *model) branchLine(branch entity.Branch, isCursor bool) string {
 		age = paint(dimStyle, "  "+fit(branch.Age, branchAgeW))
 	}
 	return paint(nameStyle, mark+fit(branch.Name, nameW)+"  ") +
-		paint(lipgloss.NewStyle().Foreground(stateColors[st]), fit(text, branchStateW)) +
+		paint(lipgloss.NewStyle().Foreground(color), fit(text, branchStateW)) +
 		age
 }
 
