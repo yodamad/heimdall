@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/yodamad/heimdall/commons"
+	"github.com/yodamad/heimdall/entity"
 )
 
 // Max number of output lines kept per command in the detail pane
@@ -16,13 +17,17 @@ const (
 	branchW  = 14
 	stateW   = 28
 	dividerW = 3
+
+	// in the branches of the detail pane
+	branchStateW = 17
+	branchAgeW   = 10
 )
 
 const helpText = `Move
   ↑/↓ j/k      move
   g/G          first / last repository
   pgup/pgdown  previous / next page
-  tab          scroll the details, tab again to go back
+  tab          go to the details, tab again to go back
   /            filter repositories by path
   esc          clear the filter, then the selection
   enter        collapse / expand the folder, also with ←/→
@@ -40,7 +45,11 @@ Act on the selected repositories, or if none on the current one or folder
   m            run the morning routine
   !            run a command
 
-  q            quit
+In the details
+  ↑/↓ j/k      choose a branch of the repository, pgup/pgdown to scroll
+  enter        switch to the chosen branch
+
+  q           quit
 
 Repositories needing attention come first in their folder. Nothing is fetched at startup:
 what the list knows about origin dates from the last fetch, press f to check origin.`
@@ -50,6 +59,7 @@ var busyVerbs = map[string]string{
 	busyRefresh: "reading",
 	busyFetch:   "fetching",
 	busyPull:    "pulling",
+	busySwitch:  "switching",
 	busyCmd:     "running",
 }
 
@@ -217,6 +227,12 @@ func (m *model) keysLine() string {
 		keys = []string{"y confirm", "any other key cancel"}
 	case m.mode == modeHelp:
 		keys = []string{"any key go back"}
+	case m.detailFocus && len(m.branchChoices()) > 0:
+		keys = []string{"↑↓ choose a branch"}
+		if branch := m.branchChoices()[m.branchCursor]; !branch.Current {
+			keys = append(keys, "enter switch to "+branch.Name)
+		}
+		keys = append(keys, "pgup/pgdown scroll", "tab back to the list", "q quit")
 	case m.detailFocus:
 		keys = []string{"↑↓ scroll", "tab back to the list", "q quit"}
 	case len(m.rows) == 0:
@@ -357,7 +373,7 @@ func (m *model) folderLine(folder string, isCursor bool) string {
 	return line + paint(lipgloss.NewStyle(), strings.Repeat(" ", max(0, m.listW-used)))
 }
 
-// folderContent tells which repositories of a folder need attention
+// folderContent lists the repositories of a folder by state, the ones needing attention first
 func (m *model) folderContent(folder string) string {
 	byState, nb := m.folderStates(folder)
 	var b strings.Builder
@@ -368,11 +384,16 @@ func (m *model) folderContent(folder string) string {
 			continue
 		}
 		b.WriteString("\n" + lipgloss.NewStyle().Foreground(stateColors[st]).Render(strconv.Itoa(len(rows))+" "+stateNames[st]) + "\n")
-		if st >= stateClean {
-			continue
-		}
 		for _, r := range rows {
-			b.WriteString(fit(r.base, m.detail.Width-stateW-2) + "  " + dimStyle.Render(stateText(r)) + "\n")
+			// The heading already tells the state of the ones which need nothing
+			text := stateText(r)
+			switch {
+			case st == stateLoading:
+				text = ""
+			case text == "up to date":
+				text = "on " + r.gf.CurrentBranch
+			}
+			b.WriteString(fit(r.base, m.detail.Width-stateW-2) + "  " + dimStyle.Render(fit(text, stateW)) + "\n")
 		}
 	}
 	return b.String()
@@ -555,41 +576,15 @@ func (m *model) detailContent(r *row) string {
 	if age := fetchAge(r.gf); r.gf.RemoteURL != "" && !stale(r.gf) {
 		text += " " + dimStyle.Render(strings.ToUpper(age[:1])+age[1:]+".")
 	}
+	if r.stashes > 0 {
+		text += " " + plural(r.stashes, "stash", "stashes") + " kept aside."
+	}
 	if r.note != "" && !r.noteOK {
 		text += "\n" + koStyle.Render(strings.ToUpper(r.note[:1])+r.note[1:])
 	}
 	b.WriteString(text + "\n")
 
-	if len(r.gf.ChangedFiles) > 0 {
-		section("Changed files", len(r.gf.ChangedFiles))
-		for _, file := range r.gf.ChangedFiles {
-			b.WriteString(changedFile(file) + "\n")
-		}
-	}
-
-	commits := func(title string, st state, commits []string) {
-		if len(commits) == 0 {
-			return
-		}
-		section(title, len(commits))
-		for _, commit := range commits {
-			fields := strings.SplitN(commit, "\t", 3)
-			if len(fields) != 3 {
-				b.WriteString(commit + "\n")
-				continue
-			}
-			// One line per commit: the subject gives way to the hash and the age
-			hash, age := fields[0], strings.TrimSuffix(fields[1], " ago")
-			subjectW := m.detail.Width - lipgloss.Width(hash) - lipgloss.Width(age) - 3
-			if subjectW < 10 {
-				age, subjectW = "", m.detail.Width-lipgloss.Width(hash)-1
-			}
-			b.WriteString(lipgloss.NewStyle().Foreground(stateColors[st]).Render(hash) + " " + fit(fields[2], subjectW) + "  " + dimStyle.Render(age) + "\n")
-		}
-	}
-	commits("Incoming", stateBehind, r.incoming)
-	commits("Not pushed", stateAhead, r.outgoing)
-
+	// What was just asked for comes before what is always there
 	if len(r.cmds) > 0 {
 		section("Commands", 0)
 		for _, cmd := range r.cmds {
@@ -603,7 +598,92 @@ func (m *model) detailContent(r *row) string {
 			}
 		}
 	}
+
+	if len(r.gf.ChangedFiles) > 0 {
+		section("Changed files", len(r.gf.ChangedFiles))
+		for _, file := range r.gf.ChangedFiles {
+			b.WriteString(changedFile(file) + "\n")
+		}
+	}
+
+	commits := func(title string, nb int, st state, commits []string) {
+		if len(commits) == 0 {
+			return
+		}
+		section(title, nb)
+		for _, commit := range commits {
+			fields := strings.SplitN(commit, "\t", 3)
+			if len(fields) != 3 {
+				b.WriteString(commit + "\n")
+				continue
+			}
+			// One line per commit: the subject gives way to the hash and the age
+			hash, age := fields[0], fields[1]
+			subjectW := m.detail.Width - lipgloss.Width(hash) - lipgloss.Width(age) - 3
+			if subjectW < 10 {
+				age, subjectW = "", m.detail.Width-lipgloss.Width(hash)-1
+			}
+			b.WriteString(lipgloss.NewStyle().Foreground(stateColors[st]).Render(hash) + " " + fit(fields[2], subjectW) + "  " + dimStyle.Render(age) + "\n")
+		}
+	}
+	commits("Incoming", len(r.incoming), stateBehind, r.incoming)
+	commits("Not pushed", len(r.outgoing), stateAhead, r.outgoing)
+
+	// A single branch is the one already told above
+	if len(r.branches) > 1 {
+		section("Branches", len(r.branches))
+		// The lines above may be wrapped, the branches are below what they become
+		m.branchTop = strings.Count(lipgloss.NewStyle().Width(m.detail.Width).Render(b.String()), "\n")
+		for i, branch := range r.branches {
+			b.WriteString(m.branchLine(branch, m.detailFocus && i == m.branchCursor) + "\n")
+		}
+	}
+
+	commits("Last commits", 0, stateClean, r.recent)
 	return b.String()
+}
+
+// branchLine tells where a branch stands compared to the one it tracks, in the color
+// of the state it would put the repository in, and how old its last commit is
+func (m *model) branchLine(branch entity.Branch, isCursor bool) string {
+	paint := func(style lipgloss.Style, text string) string {
+		if isCursor && commons.NoColor {
+			style = style.Reverse(true)
+		} else if isCursor {
+			style = style.Background(cursorColor)
+		}
+		return style.Render(text)
+	}
+
+	text, st := "up to date", stateClean
+	switch {
+	case branch.Upstream == "":
+		text, st = "not on "+commons.RemoteName, stateAhead
+	case branch.Gone:
+		text = "gone from " + commons.RemoteName
+	case branch.Ahead > 0 && branch.Behind > 0:
+		text, st = strconv.Itoa(branch.Ahead)+" ahead, "+strconv.Itoa(branch.Behind)+" behind", stateBroken
+	case branch.Behind > 0:
+		text, st = strconv.Itoa(branch.Behind)+" behind", stateBehind
+	case branch.Ahead > 0:
+		text, st = strconv.Itoa(branch.Ahead)+" ahead", stateAhead
+	}
+
+	// As git does, a star marks the branch the repository is on
+	mark, nameStyle := "  ", lipgloss.NewStyle()
+	if branch.Current {
+		mark, nameStyle = "* ", boldStyle
+	}
+
+	// The age gives way first, then the name
+	nameW, age := m.detail.Width-2-2-branchStateW, ""
+	if nameW-branchAgeW-2 >= 12 {
+		nameW -= branchAgeW + 2
+		age = paint(dimStyle, "  "+fit(branch.Age, branchAgeW))
+	}
+	return paint(nameStyle, mark+fit(branch.Name, nameW)+"  ") +
+		paint(lipgloss.NewStyle().Foreground(stateColors[st]), fit(text, branchStateW)) +
+		age
 }
 
 // shortRemote keeps the host and the path of a remote URL

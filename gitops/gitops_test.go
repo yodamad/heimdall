@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/yodamad/heimdall/commons"
@@ -114,5 +115,36 @@ func TestStatusFetchPull(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(second, "two.txt")); err != nil {
 		t.Errorf("two.txt should have been pulled : %v", err)
+	}
+
+	// Branches, the current one first
+	run(t, second, "checkout", "-b", "spike")
+	commit(t, second, "three.txt")
+	run(t, second, "checkout", "main")
+	branches := Branches(second)
+	if len(branches) != 2 || branches[0].Name != "main" || !branches[0].Current || branches[0].Upstream != "origin/main" ||
+		branches[1].Name != "spike" || branches[1].Current || branches[1].Upstream != "" {
+		t.Errorf("expected main then spike : %+v", branches)
+	}
+	if commits := RecentCommits(second, 1); len(commits) != 1 || !strings.HasSuffix(commits[0], "add two.txt") {
+		t.Errorf("expected the last commit of main, got %v", commits)
+	}
+
+	// Switch tells why git refuses
+	if err := os.WriteFile(filepath.Join(second, "three.txt"), []byte("local"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Switch(second, "spike"); err == nil || !strings.Contains(err.Error(), "three.txt") {
+		t.Errorf("switch should be refused because of three.txt : %v", err)
+	}
+	run(t, second, "stash", "-u")
+	if nb := Stashes(second); nb != 1 {
+		t.Errorf("expected 1 stash, got %d", nb)
+	}
+	if err := Switch(second, "spike"); err != nil {
+		t.Fatalf("switch failed : %v", err)
+	}
+	if gf = LocalStatus(second); gf.CurrentBranch != "spike" {
+		t.Errorf("expected to be on spike : %+v", gf)
 	}
 }

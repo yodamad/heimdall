@@ -32,6 +32,7 @@ const (
 	busyRefresh = "refresh"
 	busyFetch   = "fetch"
 	busyPull    = "pull"
+	busySwitch  = "switch"
 	busyCmd     = "cmd"
 )
 
@@ -47,6 +48,9 @@ type row struct {
 	noteOK   bool
 	incoming []string
 	outgoing []string
+	recent   []string // last commits of the current branch
+	branches []entity.Branch
+	stashes  int
 	cmds     []entity.CmdInfo
 }
 
@@ -81,10 +85,15 @@ type model struct {
 	discovering bool
 	detailFocus bool
 	detailPath  string
-	pending     *pendingAction
-	status      string
-	sorted      bool
-	morning     []string // commands of the morning routine
+	// the branch of the current repository chosen in the details, the line of the
+	// first one in the details, and if the chosen one has to be scrolled to
+	branchCursor int
+	branchTop    int
+	followBranch bool
+	pending      *pendingAction
+	status       string
+	sorted       bool
+	morning      []string // commands of the morning routine
 
 	// progress of the running actions
 	batchKind  string
@@ -180,6 +189,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			r.gf = msg.gf
 			r.incoming = msg.incoming
 			r.outgoing = msg.outgoing
+			r.recent = msg.recent
+			r.branches = msg.branches
+			r.stashes = msg.stashes
 			r.loaded = true
 			r.busy = ""
 		}
@@ -294,11 +306,27 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 	}
 
 	if m.detailFocus {
+		branches := m.branchChoices()
 		switch key.String() {
 		case "tab", "esc":
 			m.detailFocus = false
 		case "q":
 			return tea.Quit
+		case "up", "k", "down", "j":
+			if len(branches) == 0 {
+				var cmd tea.Cmd
+				m.detail, cmd = m.detail.Update(key)
+				return cmd
+			}
+			if key.String() == "up" || key.String() == "k" {
+				m.branchCursor--
+			} else {
+				m.branchCursor++
+			}
+			m.branchCursor = max(0, min(m.branchCursor, len(branches)-1))
+			m.followBranch = true
+		case "enter":
+			return m.switchBranch()
 		default:
 			var cmd tea.Cmd
 			m.detail, cmd = m.detail.Update(key)
@@ -352,6 +380,7 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 		m.applyFilter()
 	case "tab":
 		m.detailFocus = len(m.lines) > 0
+		m.branchCursor, m.followBranch = 0, true
 	case "/":
 		m.mode = modeFilter
 		m.filter.Focus()
@@ -445,6 +474,33 @@ func (m *model) targets() []*row {
 		targets = m.folderRows(m.currentFolder())
 	}
 	return targets
+}
+
+// branchChoices are the branches which can be chosen in the details: the ones of the
+// current repository, when it has more than the one it is on
+func (m *model) branchChoices() []entity.Branch {
+	if r := m.current(); r != nil && r.loaded && len(r.branches) > 1 {
+		return r.branches
+	}
+	return nil
+}
+
+// switchBranch puts the current repository on the branch chosen in the details
+func (m *model) switchBranch() tea.Cmd {
+	r, branches := m.current(), m.branchChoices()
+	if m.branchCursor >= len(branches) || branches[m.branchCursor].Current || r.busy != "" {
+		return nil
+	}
+	if m.running() == 0 {
+		m.batchTotal = 0
+	}
+	m.batchKind = busySwitch
+	m.batchTotal++
+	r.note, r.busy = "", busySwitch
+	cmd := switchCmd(r.gf.Path, branches[m.branchCursor].Name)
+	// The branch the repository is on comes first
+	m.branchCursor, m.followBranch = 0, true
+	return cmd
 }
 
 // start launches an action on each target which is not already busy
@@ -695,15 +751,34 @@ func (m *model) syncDetail() {
 	}
 	content, path := "", ""
 	if r := m.current(); r != nil {
-		content, path = m.detailContent(r), r.gf.Path
+		path = r.gf.Path
 	} else if folder := m.currentFolder(); folder != "" {
 		content, path = m.folderContent(folder), folder+"/"
 	} else {
 		m.detailFocus = false
+	}
+	if m.detailPath != path {
+		m.branchCursor = 0
+	}
+	m.branchCursor = max(0, min(m.branchCursor, len(m.branchChoices())-1))
+	m.branchTop = -1
+	if r := m.current(); r != nil {
+		// Built once the chosen branch is known to be one of the repository
+		content = m.detailContent(r)
 	}
 	m.detail.SetContent(lipgloss.NewStyle().Width(m.detail.Width).Render(content))
 	if m.detailPath != path {
 		m.detailPath = path
 		m.detail.GotoTop()
 	}
+
+	// The chosen branch stays in sight, with the title of the branches when it is the first
+	if line := m.branchTop + m.branchCursor; m.followBranch && m.detailFocus && m.branchTop >= 0 {
+		if top := max(0, line-1); top < m.detail.YOffset {
+			m.detail.SetYOffset(top)
+		} else if line >= m.detail.YOffset+m.detail.Height {
+			m.detail.SetYOffset(line - m.detail.Height + 1)
+		}
+	}
+	m.followBranch = false
 }

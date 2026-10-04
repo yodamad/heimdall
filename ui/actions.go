@@ -10,6 +10,9 @@ import (
 // Max number of repositories processed at the same time
 const maxWorkers = 6
 
+// Number of commits of the current branch listed in the detail pane
+const nbRecentCommits = 5
+
 var workers = make(chan struct{}, maxWorkers)
 
 type discoveredMsg struct {
@@ -20,6 +23,9 @@ type statusMsg struct {
 	gf       entity.GitFolder
 	incoming []string
 	outgoing []string
+	recent   []string
+	branches []entity.Branch
+	stashes  int
 }
 
 type opMsg struct {
@@ -45,6 +51,12 @@ func statusCmd(path string) tea.Cmd {
 		defer func() { <-workers }()
 
 		msg := statusMsg{gf: gitops.LocalStatus(path)}
+		if msg.gf.Err != "" {
+			return msg
+		}
+		msg.recent = gitops.RecentCommits(path, nbRecentCommits)
+		msg.branches = gitops.Branches(path)
+		msg.stashes = gitops.Stashes(path)
 		if entity.HasRemoteChanges(msg.gf) {
 			msg.incoming = gitops.IncomingCommits(path, msg.gf.CurrentBranch)
 		}
@@ -68,6 +80,14 @@ func pullCmd(path string) tea.Cmd {
 		workers <- struct{}{}
 		defer func() { <-workers }()
 		return opMsg{path: path, kind: busyPull, err: gitops.Pull(path)}
+	}
+}
+
+func switchCmd(path string, branch string) tea.Cmd {
+	return func() tea.Msg {
+		workers <- struct{}{}
+		defer func() { <-workers }()
+		return opMsg{path: path, kind: busySwitch, err: gitops.Switch(path, branch)}
 	}
 }
 

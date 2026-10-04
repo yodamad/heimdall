@@ -19,6 +19,17 @@ type GitFolder struct {
 	Err                  string
 }
 
+// Branch is a local branch, and where it stands compared to the branch it tracks
+type Branch struct {
+	Name     string
+	Current  bool
+	Upstream string
+	Gone     bool // the tracked branch is not on the remote anymore
+	Ahead    int
+	Behind   int
+	Age      string // of its last commit
+}
+
 type CmdInfo struct {
 	Cmd      string
 	ExitCode int

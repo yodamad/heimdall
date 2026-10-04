@@ -59,6 +59,8 @@ func press(m *model, keys ...string) {
 			msg = tea.KeyMsg{Type: tea.KeyDown}
 		case " ":
 			msg = tea.KeyMsg{Type: tea.KeySpace}
+		case "tab":
+			msg = tea.KeyMsg{Type: tea.KeyTab}
 		}
 		_, cmd := m.Update(msg)
 		drain(m, cmd)
@@ -180,10 +182,42 @@ func TestNavigateAndRunActions(t *testing.T) {
 		t.Errorf("view should contain the command result :\n%s", view)
 	}
 
+	// The details list the last commits, and the branches when there are several
+	if strings.Contains(view, "Branches") || !strings.Contains(view, "Last commits") || !strings.Contains(view, "add one.txt") {
+		t.Errorf("view should contain the last commits and no branches :\n%s", view)
+	}
+	git(t, dirty, "branch", "spike")
+	git(t, dirty, "stash", "-u")
+	press(m, "r")
+	if view = m.View(); !strings.Contains(view, "Branches 2") || !strings.Contains(view, "* main") || !strings.Contains(view, "not on origin") || !strings.Contains(view, "1 stash kept aside.") {
+		t.Errorf("view should contain the branches and the stash :\n%s", view)
+	}
+	press(m, "tab", "enter")
+	if m.rows[0].gf.CurrentBranch != "main" {
+		t.Errorf("enter on the current branch should do nothing : %+v", m.rows[0])
+	}
+	press(m, "j")
+	if view = m.View(); !strings.Contains(view, "enter switch to spike") {
+		t.Errorf("view should tell how to switch to spike :\n%s", view)
+	}
+	press(m, "enter")
+	if r := m.rows[0]; r.gf.CurrentBranch != "spike" || !r.branches[0].Current || r.note != "" || m.branchCursor != 0 {
+		t.Errorf("dirty should be on spike : %+v", r)
+	}
+	press(m, "j", "enter", "tab")
+	if m.rows[0].gf.CurrentBranch != "main" || m.detailFocus {
+		t.Errorf("dirty should be back on main, and the list focused : %+v", m.rows[0])
+	}
+	git(t, dirty, "stash", "pop")
+	press(m, "r")
+
 	// A collapsed folder hides its repositories, actions on it target them all
 	press(m, "down", "enter")
 	if m.current() != nil || m.currentFolder() != "group" || len(m.lines) != 3 {
 		t.Fatalf("group should be collapsed with the cursor on it : %+v", m.lines)
+	}
+	if view = m.View(); !strings.Contains(view, "1 up to date") || !strings.Contains(view, "on main") {
+		t.Errorf("details should list the repositories of group :\n%s", view)
 	}
 	if view = m.View(); !strings.Contains(view, "▸ group  1") || strings.Contains(view, "   behind ") {
 		t.Errorf("view should display group collapsed :\n%s", view)

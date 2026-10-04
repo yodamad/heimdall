@@ -6,7 +6,7 @@ Running `heimdall` without any command (or `heimdall tui`, `heimdall ui`) opens 
 heimdall -w ~/work
 ```
 
-The list shows the repositories found in the [work directory](flags.md#work-directory----work-dir-or--w), grouped by folder, the ones needing attention first in each folder. Next to it are the details of the current repository : what state it is in and what you can do about it, its changed files, incoming commits and the output of the last commands run on it.
+The list shows the repositories found in the [work directory](flags.md#work-directory----work-dir-or--w), grouped by folder, the ones needing attention first in each folder. Next to it are the details of the current repository : what state it is in and what you can do about it, the output of the last commands run on it, its changed files, its incoming and not pushed commits, its branches and its last commits.
 
 ## Reading the list
 
@@ -31,7 +31,7 @@ The other commands (`git-info`, `git-clone`, `good-morning`, `env-info`) are sti
 |---|---|
 | ++up++ / ++down++ or ++j++ / ++k++ | Move |
 | ++g++ / ++shift+g++ | First / last repository |
-| ++tab++ | Focus the details pane to scroll in it, ++tab++ again to go back |
+| ++tab++ | Go to the details, ++tab++ again to go back |
 | ++enter++ or ++left++ / ++right++ | Collapse / expand the folder |
 | ++z++ | Collapse / expand all the folders |
 | ++slash++ | Filter repositories by path |
@@ -43,7 +43,7 @@ The other commands (`git-info`, `git-clone`, `good-morning`, `env-info`) are sti
 
 Actions are run on the selected repositories or, if none is selected, on the current one. With the cursor on a folder, they are run on all its repositories.
 
-A collapsed folder tells what its repositories need, and the details list the ones needing attention.
+A collapsed folder tells what its repositories need, and the details list them all by state, the ones needing attention first.
 
 | Key | Action |
 |---|---|
@@ -62,6 +62,20 @@ A confirmation is asked before pulling or running commands on several repositori
 | ++p++ | `git pull`, skipped for repositories with local changes |
 | ++m++ | Run the morning routine defined in the [configuration file](config.md) |
 | ++exclam++ | Run a command |
+
+## Branches
+
+When a repository has several local branches, the details list them : the one the repository is on first, marked with a star, then the most recently committed ones. Each tells where it stands compared to origin and how old its last commit is, so that work left on a branch which was never pushed is not forgotten.
+
+Press ++tab++ to go to the details, then :
+
+| Key | Action |
+|---|---|
+| ++up++ / ++down++ or ++j++ / ++k++ | Choose a branch |
+| ++enter++ | Switch to the chosen branch with `git switch` |
+| ++page-up++ / ++page-down++ | Scroll the details |
+
+When git refuses to switch, because of local changes for instance, the details tell why.
 
 ## Available options
 
