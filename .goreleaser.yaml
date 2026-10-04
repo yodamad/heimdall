@@ -75,3 +75,16 @@ brews:
       name: homebrew-tools
       branch: main
 
+announce:
+  # no post for prereleases (v1.0.0-rc1, ...)
+  skip: '{{ ne .Prerelease "" }}'
+  bluesky:
+    enabled: true
+    username: yodamad03.bsky.social
+    message_template: |
+      🚀 Heimdall {{ .Tag }} is out!
+
+      A CLI to help with your git directories.
+
+      {{ .ReleaseURL }}
+
