@@ -30,7 +30,9 @@ const helpText = `Move
   tab          go to the details, tab again to go back
   /            filter repositories by path
   esc          clear the filter, then the selection
-  enter        collapse / expand the folder, also with ←/→
+  enter        collapse / expand the folder
+  ← h          collapse the folder, or go to the folder the line is in
+  → l          expand the folder, or go into it
   z            collapse / expand all the folders
 
 Select
@@ -51,7 +53,7 @@ In the details
 
   q           quit
 
-Repositories needing attention come first in their folder. Nothing is fetched at startup:
+A folder lists its folders, then its repositories, the ones needing attention first. Nothing is fetched at startup:
 what the list knows about origin dates from the last fetch, press f to check origin.`
 
 var busyVerbs = map[string]string{
@@ -300,15 +302,14 @@ func (m *model) listLines() []string {
 	for i := m.offset; i < end; i++ {
 		line := m.lines[i]
 		switch {
-		case line.r != nil && i == m.offset && i > 0 && line.r.dir != "":
-			// The folder stays in sight while its repositories are scrolled
-			lines = append(lines, m.folderLine(line.r.dir, false))
+		case i == m.offset && i > 0 && i+1 < len(m.lines) && m.lines[i+1].parent != "" && m.lines[i+1].parent != line.folder:
+			// Where the list is scrolled to stays in sight: the whole path of the folder the next line is in
+			parent := m.lines[i+1].parent
+			lines = append(lines, m.folderLine(listLine{folder: parent, label: parent}, false))
 		case line.r != nil:
-			lines = append(lines, m.rowLine(line.r, i == m.cursor))
-		case line.folder != "":
-			lines = append(lines, m.folderLine(line.folder, i == m.cursor))
+			lines = append(lines, m.rowLine(line.r, line.depth, i == m.cursor))
 		default:
-			lines = append(lines, strings.Repeat(" ", m.listW))
+			lines = append(lines, m.folderLine(line, i == m.cursor))
 		}
 	}
 	for len(lines) < m.paneH {
@@ -327,10 +328,17 @@ func (m *model) folderStates(folder string) (map[state][]*row, int) {
 	return byState, len(rows)
 }
 
-// folderLine is the heading of the repositories of a folder: the path to it stays
-// quiet, its own name stands out, followed by how many repositories are listed in it.
+// guides are the lines drawn under the folders a line of the list is in. The deepest
+// ones are not drawn when they would leave no room for a name.
+func (m *model) guides(depth int) string {
+	return strings.Repeat("│ ", max(0, min(depth, (m.listW-stateW-17)/2)))
+}
+
+// folderLine is a folder of the tree: the path to it stays quiet, its own name stands
+// out, followed by how many repositories are listed in it and in the folders it holds.
 // A collapsed folder tells what its hidden repositories need.
-func (m *model) folderLine(folder string, isCursor bool) string {
+func (m *model) folderLine(at listLine, isCursor bool) string {
+	folder := at.folder
 	paint := func(style lipgloss.Style, text string) string {
 		if isCursor && commons.NoColor {
 			style = style.Reverse(true)
@@ -352,14 +360,16 @@ func (m *model) folderLine(folder string, isCursor bool) string {
 		marker = "-"
 	}
 
+	guides := m.guides(at.depth)
+	indent := 3 + lipgloss.Width(guides)
 	count := "  " + strconv.Itoa(nb)
-	name := strings.TrimSpace(fitLeft(folder, m.listW-3-lipgloss.Width(count)))
+	name := strings.TrimSpace(fitLeft(at.label, m.listW-indent-lipgloss.Width(count)))
 	parent := ""
-	if i := strings.LastIndex(name, "/"); i >= 0 {
+	if i := strings.LastIndex(name, sep); i >= 0 {
 		parent, name = name[:i+1], name[i+1:]
 	}
-	line := paint(dimStyle, " "+marker+" "+parent) + paint(boldStyle, name) + paint(dimStyle, count)
-	used := 3 + lipgloss.Width(parent+name+count)
+	line := paint(dimStyle, " "+guides+marker+" "+parent) + paint(boldStyle, name) + paint(dimStyle, count)
+	used := indent + lipgloss.Width(parent+name+count)
 
 	if collapsed {
 		for st := stateBroken; st < stateClean; st++ {
@@ -393,7 +403,7 @@ func (m *model) folderContent(folder string) string {
 			case text == "up to date":
 				text = "on " + r.gf.CurrentBranch
 			}
-			b.WriteString(fit(r.base, m.detail.Width-stateW-2) + "  " + dimStyle.Render(fit(text, stateW)) + "\n")
+			b.WriteString(fit(strings.TrimPrefix(r.name, folder+sep), m.detail.Width-stateW-2) + "  " + dimStyle.Render(fit(text, stateW)) + "\n")
 		}
 	}
 	return b.String()
@@ -427,7 +437,7 @@ func stateText(r *row) string {
 	return "up to date"
 }
 
-func (m *model) rowLine(r *row, isCursor bool) string {
+func (m *model) rowLine(r *row, depth int, isCursor bool) string {
 	st := stateOf(r)
 	paint := func(style lipgloss.Style, text string) string {
 		if isCursor && commons.NoColor {
@@ -462,14 +472,16 @@ func (m *model) rowLine(r *row, isCursor bool) string {
 		text, textStyle = r.note, koStyle
 	}
 
-	nameW := m.listW - 3 - 2 - stateW
+	// The name gives way to the guides, so that branches and states stay aligned
+	guides := m.guides(depth)
+	nameW := m.listW - 3 - lipgloss.Width(guides) - 2 - stateW
 	branch := ""
 	if nameW-branchW-2 >= 16 {
 		nameW -= branchW + 2
 		branch = paint(dimStyle, fit(r.gf.CurrentBranch, branchW)+"  ")
 	}
 
-	return paint(plain, " ") +
+	return paint(dimStyle, " "+guides) +
 		paint(lipgloss.NewStyle().Foreground(selectColor), mark) +
 		paint(nameStyle, " "+fit(r.base, nameW)+"  ") +
 		branch +

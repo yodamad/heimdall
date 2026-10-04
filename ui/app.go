@@ -54,14 +54,22 @@ type row struct {
 	cmds     []entity.CmdInfo
 }
 
-// listLine is a line of the list: a repository, the heading of a folder or a blank line
+const sep = string(filepath.Separator)
+
+// listLine is a line of the list: a repository, or a folder of the tree they are in
 type listLine struct {
 	r      *row
-	folder string
+	folder string // path of the folder, relative to the root directory
+	label  string // name of the folder, after the ones of the folders it is alone in
+	parent string // folder the line is in, empty at the root
+	depth  int
 }
 
-func (l listLine) blank() bool {
-	return l.r == nil && l.folder == ""
+// treeNode is a folder while the tree is built
+type treeNode struct {
+	path    string
+	folders []*treeNode
+	rows    []*row
 }
 
 type pendingAction struct {
@@ -77,7 +85,8 @@ type model struct {
 	byPath    map[string]*row
 	visible   []*row // rows matching the filter
 	lines     []listLine
-	collapsed map[string]bool // folders whose repositories are hidden
+	folders   map[string]listLine // folders of the tree, listed or hidden in a collapsed one
+	collapsed map[string]bool     // folders whose content is hidden
 	cursor    int
 	offset    int
 
@@ -171,10 +180,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmds []tea.Cmd
 		for _, path := range msg.paths {
 			r := &row{gf: entity.GitFolder{Path: path}, name: m.relName(path), busy: busyRefresh}
-			r.base = filepath.Base(r.name)
-			if dir := filepath.Dir(r.name); dir != "." {
-				r.dir = dir
-			}
+			r.base, r.dir = filepath.Base(r.name), parentDir(r.name)
 			m.rows = append(m.rows, r)
 			m.byPath[path] = r
 			cmds = append(cmds, statusCmd(path))
@@ -358,24 +364,31 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 			m.collapse(folder, !m.collapsed[folder])
 		}
 	case "left", "h":
-		if r := m.current(); r != nil {
-			m.collapse(r.dir, true)
+		// As in a file navigator: an open folder is collapsed, anything else leads to its folder
+		if folder := m.currentFolder(); folder != "" && !m.isCollapsed(folder) {
+			m.collapse(folder, true)
 		} else {
-			m.collapse(m.currentFolder(), true)
+			m.goTo(m.currentLine().parent)
 		}
 	case "right", "l":
-		m.collapse(m.currentFolder(), false)
+		// A collapsed folder is expanded, an open one is entered
+		if folder := m.currentFolder(); m.isCollapsed(folder) {
+			m.collapse(folder, false)
+		} else if folder != "" {
+			m.moveCursor(1)
+		}
 	case "z":
-		// Collapse all the folders, or expand them all when they already are
-		all := true
-		for _, r := range m.rows {
-			all = all && (r.dir == "" || m.collapsed[r.dir])
-		}
-		for _, r := range m.rows {
-			m.collapsed[r.dir] = !all && r.dir != ""
-		}
 		if m.filter.Value() != "" {
 			m.status = "Folders stay open while the list is filtered, esc to list all"
+			break
+		}
+		// Collapse all the folders, or expand them all when they already are
+		all := true
+		for folder := range m.folders {
+			all = all && m.collapsed[folder]
+		}
+		for folder := range m.folders {
+			m.collapsed[folder] = !all
 		}
 		m.applyFilter()
 	case "tab":
@@ -573,12 +586,36 @@ func (m *model) resort() {
 	}
 }
 
-// sortRows keeps the repositories of a folder together, the ones needing attention first
+// parentDir is the folder a folder or a repository is in, empty at the root
+func parentDir(path string) string {
+	if dir := filepath.Dir(path); dir != "." {
+		return dir
+	}
+	return ""
+}
+
+// dirLess orders the folders as a tree: a folder comes with what it holds, and the
+// folders it holds come before its own repositories
+func dirLess(a, b string) bool {
+	split := func(dir string) []string {
+		return strings.FieldsFunc(dir, func(r rune) bool { return r == filepath.Separator })
+	}
+	as, bs := split(a), split(b)
+	for i := 0; i < len(as) && i < len(bs); i++ {
+		if as[i] != bs[i] {
+			return as[i] < bs[i]
+		}
+	}
+	return len(as) > len(bs)
+}
+
+// sortRows puts the repositories in the order of the tree, the ones needing attention
+// first in their folder
 func (m *model) sortRows() {
 	sort.SliceStable(m.rows, func(i, j int) bool {
 		ri, rj := m.rows[i], m.rows[j]
 		if ri.dir != rj.dir {
-			return ri.dir < rj.dir
+			return dirLess(ri.dir, rj.dir)
 		}
 		if si, sj := stateOf(ri), stateOf(rj); si != sj {
 			return si < sj
@@ -603,23 +640,35 @@ func (m *model) currentFolder() string {
 	return m.currentLine().folder
 }
 
-// folderRows are the listed repositories of a folder
+// folderRows are the listed repositories of a folder and of the folders it holds
 func (m *model) folderRows(folder string) []*row {
 	var rows []*row
 	for _, r := range m.visible {
-		if r.dir == folder {
+		if r.dir == folder || strings.HasPrefix(r.dir, folder+sep) {
 			rows = append(rows, r)
 		}
 	}
 	return rows
 }
 
-// isCollapsed tells if the repositories of a folder are hidden. A filter opens all the folders.
+// isCollapsed tells if the content of a folder is hidden. A filter opens all the folders.
 func (m *model) isCollapsed(folder string) bool {
 	return m.collapsed[folder] && m.filter.Value() == ""
 }
 
-// collapse hides or shows the repositories of a folder
+// goTo puts the cursor on a folder, if it is listed
+func (m *model) goTo(folder string) bool {
+	for i, line := range m.lines {
+		if folder != "" && line.folder == folder {
+			m.cursor = i
+			m.moveCursor(0)
+			return true
+		}
+	}
+	return false
+}
+
+// collapse hides or shows the content of a folder
 func (m *model) collapse(folder string, collapsed bool) {
 	if folder == "" {
 		return
@@ -644,32 +693,20 @@ func (m *model) firstRow() {
 	m.moveCursor(0)
 }
 
-// moveCursor moves the cursor by delta repositories or folders, the blank lines are skipped
+// moveCursor moves the cursor by delta lines
 func (m *model) moveCursor(delta int) {
-	step := 1
-	if delta < 0 {
-		step, delta = -1, -delta
-	}
-	for ; delta > 0; delta-- {
-		next := m.cursor + step
-		for next >= 0 && next < len(m.lines) && m.lines[next].blank() {
-			next += step
-		}
-		if next < 0 || next >= len(m.lines) {
-			break
-		}
-		m.cursor = next
-	}
-	m.cursor = max(0, min(m.cursor, len(m.lines)-1))
+	m.cursor = max(0, min(m.cursor+delta, len(m.lines)-1))
 
-	// The line above the cursor is kept in sight: it is the folder of the repository,
-	// or the line the folder is pinned on while its repositories are scrolled
+	// The line above the cursor is kept in sight: it is the folder of the line,
+	// or the line this folder is pinned on while its content is scrolled
 	rows := m.listRows()
 	if m.cursor <= m.offset {
 		m.offset = max(0, m.cursor-1)
 	} else if m.cursor >= m.offset+rows {
 		m.offset = m.cursor - rows + 1
 	}
+	// No room is left empty under a list which got shorter
+	m.offset = max(0, min(m.offset, len(m.lines)-rows))
 }
 
 func (m *model) applyFilter() {
@@ -682,37 +719,70 @@ func (m *model) applyFilter() {
 		}
 	}
 
-	// The list has a heading per folder, and a blank line between folders
-	m.lines = m.lines[:0]
-	for i, r := range m.visible {
-		if i == 0 || r.dir != m.visible[i-1].dir {
-			// Collapsed folders are stacked
-			if i > 0 && !(m.isCollapsed(r.dir) && m.isCollapsed(m.visible[i-1].dir)) {
-				m.lines = append(m.lines, listLine{})
-			}
-			if r.dir != "" {
-				m.lines = append(m.lines, listLine{folder: r.dir})
-			}
-		}
-		if !m.isCollapsed(r.dir) {
-			m.lines = append(m.lines, listLine{r: r})
-		}
-	}
+	m.buildLines()
 
-	// The cursor stays where it was, or on the folder its repository is now hidden in
+	// The cursor stays where it was, or goes to the closest folder its line is now hidden in
 	folder := current.folder
-	if current.r != nil && m.isCollapsed(current.r.dir) {
+	if current.r != nil {
 		folder = current.r.dir
 	}
-	m.offset = 0
 	for i, line := range m.lines {
-		if (current.r != nil && line.r == current.r) || (folder != "" && line.folder == folder) {
+		if current.r != nil && line.r == current.r {
 			m.cursor = i
 			m.moveCursor(0)
 			return
 		}
 	}
+	for ; folder != ""; folder = parentDir(folder) {
+		if m.goTo(folder) {
+			return
+		}
+	}
 	m.firstRow()
+}
+
+// buildLines lists the repositories as the tree of the folders they are in. A folder
+// holding nothing but another folder shares its line, a collapsed one hides what it holds.
+func (m *model) buildLines() {
+	// The repositories are sorted in the order of the tree, so are the folders found
+	root := &treeNode{}
+	nodes := map[string]*treeNode{"": root}
+	var nodeOf func(dir string) *treeNode
+	nodeOf = func(dir string) *treeNode {
+		if n, ok := nodes[dir]; ok {
+			return n
+		}
+		n, parent := &treeNode{path: dir}, nodeOf(parentDir(dir))
+		parent.folders = append(parent.folders, n)
+		nodes[dir] = n
+		return n
+	}
+	for _, r := range m.visible {
+		n := nodeOf(r.dir)
+		n.rows = append(n.rows, r)
+	}
+
+	m.lines, m.folders = m.lines[:0], map[string]listLine{}
+	var list func(n *treeNode, depth int, hidden bool)
+	list = func(n *treeNode, depth int, hidden bool) {
+		for _, f := range n.folders {
+			for len(f.rows) == 0 && len(f.folders) == 1 {
+				f = f.folders[0]
+			}
+			line := listLine{folder: f.path, label: strings.TrimPrefix(f.path, n.path+sep), parent: n.path, depth: depth}
+			m.folders[f.path] = line
+			if !hidden {
+				m.lines = append(m.lines, line)
+			}
+			list(f, depth+1, hidden || m.isCollapsed(f.path))
+		}
+		for _, r := range n.rows {
+			if !hidden {
+				m.lines = append(m.lines, listLine{r: r, parent: n.path, depth: depth})
+			}
+		}
+	}
+	list(root, 0, false)
 }
 
 // narrow terminals display only one pane at a time

@@ -6,7 +6,7 @@ Running `heimdall` without any command (or `heimdall tui`, `heimdall ui`) opens 
 heimdall -w ~/work
 ```
 
-The list shows the repositories found in the [work directory](flags.md#work-directory----work-dir-or--w), grouped by folder, the ones needing attention first in each folder. Next to it are the details of the current repository : what state it is in and what you can do about it, the output of the last commands run on it, its changed files, its incoming and not pushed commits, its branches and its last commits.
+The list shows the repositories found in the [work directory](flags.md#work-directory----work-dir-or--w) as the tree of the folders they are in, like a file navigator : each folder lists its folders, then its repositories, the ones needing attention first. A folder holding nothing but another folder shares its line with it. Next to it are the details of the current repository : what state it is in and what you can do about it, the output of the last commands run on it, its changed files, its incoming and not pushed commits, its branches and its last commits.
 
 ## Reading the list
 
@@ -32,7 +32,9 @@ The other commands (`git-info`, `git-clone`, `good-morning`, `env-info`) are sti
 | ++up++ / ++down++ or ++j++ / ++k++ | Move |
 | ++g++ / ++shift+g++ | First / last repository |
 | ++tab++ | Go to the details, ++tab++ again to go back |
-| ++enter++ or ++left++ / ++right++ | Collapse / expand the folder |
+| ++enter++ | Collapse / expand the folder |
+| ++left++ or ++h++ | Collapse the folder, or go to the folder the line is in |
+| ++right++ or ++l++ | Expand the folder, or go into it |
 | ++z++ | Collapse / expand all the folders |
 | ++slash++ | Filter repositories by path |
 | ++esc++ | Clear the filter, then the selection |
@@ -41,9 +43,9 @@ The other commands (`git-info`, `git-clone`, `good-morning`, `env-info`) are sti
 
 ## Selection
 
-Actions are run on the selected repositories or, if none is selected, on the current one. With the cursor on a folder, they are run on all its repositories.
+Actions are run on the selected repositories or, if none is selected, on the current one. With the cursor on a folder, they are run on all its repositories, the ones of the folders it holds included.
 
-A collapsed folder tells what its repositories need, and the details list them all by state, the ones needing attention first.
+A collapsed folder tells what its repositories need, and the details list them all by state, the ones needing attention first. When the list is scrolled, its first line tells the whole path of the folder the next ones are in.
 
 | Key | Action |
 |---|---|
