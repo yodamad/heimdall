@@ -791,7 +791,8 @@ func (m *model) narrow() bool {
 }
 
 func (m *model) listRows() int {
-	return m.paneH
+	// columns header
+	return m.paneH - 1
 }
 
 func (m *model) layout() {

@@ -330,10 +330,15 @@ func TestFolderTree(t *testing.T) {
 
 	// Scrolled, the first line tells the whole path of the folder the next ones are in
 	press(m, "z", "z")
-	m.Update(tea.WindowSizeMsg{Width: 120, Height: 9})
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 10})
 	press(m, "g", "down", "down", "down", "down", "down")
-	if view := m.View(); !strings.Contains(view, " ▾ "+filepath.FromSlash("clients/acme")+"  2") {
+	view := m.View()
+	if !strings.Contains(view, " ▾ "+filepath.FromSlash("clients/acme")+"  2") {
 		t.Errorf("view should pin the folder of the first lines :\n%s", view)
+	}
+	// The columns are named above the list, whatever it is scrolled to
+	if columns := strings.Split(stripAnsi(view), "\n")[3]; !strings.HasPrefix(columns, "   Repository ") || !strings.Contains(columns, "  Branch  ") || !strings.Contains(columns, "  State ") {
+		t.Errorf("view should name the columns of the list :\n%s", view)
 	}
 }
 

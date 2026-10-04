@@ -298,6 +298,7 @@ func (m *model) listLines() []string {
 	}
 
 	lines := make([]string, 0, m.paneH)
+	lines = append(lines, m.columnsLine())
 	end := min(m.offset+m.listRows(), len(m.lines))
 	for i := m.offset; i < end; i++ {
 		line := m.lines[i]
@@ -316,6 +317,28 @@ func (m *model) listLines() []string {
 		lines = append(lines, strings.Repeat(" ", m.listW))
 	}
 	return lines
+}
+
+// columns gives the width left to the name of a repository under guides, and if there
+// is room for its branch: the name gives way to the guides, so that branches and
+// states stay aligned
+func (m *model) columns(guides string) (int, bool) {
+	nameW := m.listW - 3 - lipgloss.Width(guides) - 2 - stateW
+	if nameW-branchW-2 >= 16 {
+		return nameW - branchW - 2, true
+	}
+	return nameW, false
+}
+
+// columnsLine names the columns of the list, above the repositories at the root
+func (m *model) columnsLine() string {
+	nameW, withBranch := m.columns("")
+	line := "   " + fit("Repository", nameW) + "  "
+	if withBranch {
+		line += fit("Branch", branchW) + "  "
+	}
+	// As the titles of the details, they stand out from what they are above
+	return boldStyle.Render(fit(line+"State", m.listW))
 }
 
 // folderStates counts the listed repositories of a folder in each state needing attention
@@ -472,12 +495,10 @@ func (m *model) rowLine(r *row, depth int, isCursor bool) string {
 		text, textStyle = r.note, koStyle
 	}
 
-	// The name gives way to the guides, so that branches and states stay aligned
 	guides := m.guides(depth)
-	nameW := m.listW - 3 - lipgloss.Width(guides) - 2 - stateW
+	nameW, withBranch := m.columns(guides)
 	branch := ""
-	if nameW-branchW-2 >= 16 {
-		nameW -= branchW + 2
+	if withBranch {
 		branch = paint(dimStyle, fit(r.gf.CurrentBranch, branchW)+"  ")
 	}
 
