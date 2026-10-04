@@ -1,9 +1,12 @@
 package gitops
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/yodamad/heimdall/commons"
@@ -15,6 +18,9 @@ import (
 // may be stale until Fetch is called.
 func LocalStatus(path string) entity.GitFolder {
 	gf := entity.GitFolder{Path: path}
+	if info, err := os.Stat(fetchHead(path)); err == nil {
+		gf.FetchedAt = info.ModTime()
+	}
 
 	repo, err := git.PlainOpen(path)
 	if err != nil {
@@ -53,13 +59,37 @@ func LocalStatus(path string) entity.GitFolder {
 	return gf
 }
 
-// IncomingCommits lists the commits of origin/<branch> missing locally
+// IncomingCommits lists the commits of origin/<branch> missing locally.
+// Each line holds the hash, the age and the subject of a commit, separated by tabs.
 func IncomingCommits(path string, branch string) []string {
-	out, err := exec.Command("git", "-C", path, "log", "--oneline", branch+".."+commons.RemoteName+"/"+branch).Output()
+	return commits(path, branch+".."+commons.RemoteName+"/"+branch)
+}
+
+// OutgoingCommits lists the local commits missing in origin/<branch>, as IncomingCommits does
+func OutgoingCommits(path string, branch string) []string {
+	return commits(path, commons.RemoteName+"/"+branch+".."+branch)
+}
+
+func commits(path string, revisions string) []string {
+	out, err := exec.Command("git", "-C", path, "log", "--format=%h%x09%cr%x09%s", revisions).Output()
 	if err != nil {
 		return nil
 	}
 	return lines(string(out))
+}
+
+func fetchHead(path string) string {
+	return filepath.Join(path, ".git", "FETCH_HEAD")
+}
+
+// markFetched updates the date of FETCH_HEAD as git does, go-git does not maintain it
+func markFetched(path string) {
+	now := time.Now()
+	if os.Chtimes(fetchHead(path), now, now) != nil {
+		if f, err := os.OpenFile(fetchHead(path), os.O_CREATE|os.O_WRONLY, 0644); err == nil {
+			f.Close()
+		}
+	}
 }
 
 func lines(s string) []string {

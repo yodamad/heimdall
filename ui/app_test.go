@@ -97,7 +97,7 @@ func TestNavigateAndRunActions(t *testing.T) {
 		t.Fatalf("unexpected repositories : %+v", m.rows)
 	}
 	view := m.View()
-	for _, expected := range []string{"2 repositories", "dirty", "group/behind", "main", "Local changes (1)", "wip.txt"} {
+	for _, expected := range []string{"2 repositories", "dirty", " group  1", "   behind", "main", "1 changed", "1 file changed.", "Never fetched", "wip.txt", "never fetched"} {
 		if !strings.Contains(view, expected) {
 			t.Errorf("view should contain %q :\n%s", expected, view)
 		}
@@ -122,13 +122,19 @@ func TestNavigateAndRunActions(t *testing.T) {
 	}
 
 	// Nothing is fetched at startup, bulk fetch needs no confirmation
-	if m.rows[1].fetched || m.rows[1].gf.RemoteChanges != "0" {
+	if !m.rows[1].gf.FetchedAt.IsZero() || m.rows[1].gf.RemoteChanges != "0" {
 		t.Errorf("no fetch expected at startup : %+v", m.rows[1])
 	}
 	press(m, "a", "f")
 	for _, r := range m.rows {
-		if !r.fetched || r.gf.RemoteChanges != "1" || len(r.incoming) != 1 || r.busy != "" {
+		if r.gf.FetchedAt.IsZero() || r.gf.RemoteChanges != "1" || len(r.incoming) != 1 || r.busy != "" {
 			t.Errorf("%s should be fetched with 1 remote change : %+v", r.name, r)
+		}
+	}
+	view = m.View()
+	for _, expected := range []string{"2 repositories", "2 behind", "1 changed, 1 behind", "1 commit behind origin. Press p to pull.", "p pull 1 of 2", "f fetch 2 selected"} {
+		if !strings.Contains(view, expected) {
+			t.Errorf("view should contain %q :\n%s", expected, view)
 		}
 	}
 
@@ -141,7 +147,7 @@ func TestNavigateAndRunActions(t *testing.T) {
 	if r := m.rows[0]; r.noteOK || !strings.Contains(r.note, "skipped") || r.gf.RemoteChanges != "1" {
 		t.Errorf("dirty should not have been pulled : %+v", r)
 	}
-	if r := m.rows[1]; !r.noteOK || r.gf.RemoteChanges != "0" {
+	if r := m.rows[1]; r.note != "" || r.gf.RemoteChanges != "0" {
 		t.Errorf("behind should have been pulled : %+v", r)
 	}
 	if _, err := os.Stat(filepath.Join(behind, "two.txt")); err != nil {
@@ -172,6 +178,31 @@ func TestNavigateAndRunActions(t *testing.T) {
 	}
 	if view = m.View(); !strings.Contains(view, "✓ ls") {
 		t.Errorf("view should contain the command result :\n%s", view)
+	}
+
+	// A collapsed folder hides its repositories, actions on it target them all
+	press(m, "down", "enter")
+	if m.current() != nil || m.currentFolder() != "group" || len(m.lines) != 3 {
+		t.Fatalf("group should be collapsed with the cursor on it : %+v", m.lines)
+	}
+	if view = m.View(); !strings.Contains(view, "▸ group  1") || strings.Contains(view, "   behind ") {
+		t.Errorf("view should display group collapsed :\n%s", view)
+	}
+	press(m, "!", "p", "w", "d", "enter")
+	if cmds := m.rows[1].cmds; len(cmds) != 1 || cmds[0].Cmd != "pwd" || len(m.rows[0].cmds) != 1 {
+		t.Errorf("pwd should have been run in the repositories of group only : %+v", cmds)
+	}
+	press(m, "enter", "down")
+	if m.current() != m.rows[1] {
+		t.Errorf("group should be expanded again : %+v", m.lines)
+	}
+	press(m, "h")
+	if m.currentFolder() != "group" || len(m.lines) != 3 {
+		t.Errorf("group should be collapsed from one of its repositories : %+v", m.lines)
+	}
+	press(m, "z", "z")
+	if len(m.lines) != 3 {
+		t.Errorf("all folders should be collapsed again : %+v", m.lines)
 	}
 
 	// Narrow terminal displays one pane

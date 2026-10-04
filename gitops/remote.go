@@ -104,7 +104,7 @@ func Fetch(path string) error {
 	if err != nil {
 		return err
 	}
-	return ignoreUpToDate(repo.Fetch(&git.FetchOptions{Auth: auth}))
+	return fetched(path, repo.Fetch(&git.FetchOptions{Auth: auth}))
 }
 
 // Pull pulls origin in the repository located in path
@@ -121,12 +121,14 @@ func Pull(path string) error {
 	if err != nil {
 		return err
 	}
-	return ignoreUpToDate(worktree.Pull(&git.PullOptions{RemoteName: commons.RemoteName, Auth: auth}))
+	return fetched(path, worktree.Pull(&git.PullOptions{RemoteName: commons.RemoteName, Auth: auth}))
 }
 
-func ignoreUpToDate(err error) error {
-	if errors.Is(err, git.NoErrAlreadyUpToDate) {
-		return nil
+// fetched records a successful fetch, being already up-to-date is one
+func fetched(path string, err error) error {
+	if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
+		return err
 	}
-	return err
+	markFetched(path)
+	return nil
 }

@@ -78,7 +78,7 @@ func TestStatusFetchPull(t *testing.T) {
 	if gf.Err != "" {
 		t.Fatalf("unexpected error : %s", gf.Err)
 	}
-	if gf.CurrentBranch != "main" || gf.HasLocalChanges || entity.HasRemoteChanges(gf) || gf.RemoteURL != remote {
+	if gf.CurrentBranch != "main" || gf.HasLocalChanges || entity.HasRemoteChanges(gf) || gf.RemoteURL != remote || !gf.FetchedAt.IsZero() {
 		t.Errorf("unexpected status before fetch : %+v", gf)
 	}
 
@@ -89,7 +89,7 @@ func TestStatusFetchPull(t *testing.T) {
 		t.Fatalf("second fetch failed : %v", err)
 	}
 	gf = LocalStatus(second)
-	if gf.RemoteChanges != "1" || !entity.CanPull(gf) {
+	if gf.RemoteChanges != "1" || !entity.CanPull(gf) || gf.FetchedAt.IsZero() {
 		t.Errorf("expected 1 remote change after fetch : %+v", gf)
 	}
 	if commits := IncomingCommits(second, "main"); len(commits) != 1 {

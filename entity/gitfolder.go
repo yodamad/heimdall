@@ -1,6 +1,9 @@
 package entity
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 type GitFolder struct {
 	Path                 string
@@ -12,6 +15,7 @@ type GitFolder struct {
 	RemoteURL            string
 	Ahead                int
 	ChangedFiles         []string
+	FetchedAt            time.Time
 	Err                  string
 }
 

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -27,23 +28,36 @@ const (
 )
 
 const (
-	busyStatus = "status"
-	busyFetch  = "fetch"
-	busyPull   = "pull"
-	busyCmd    = "cmd"
+	busyStatus  = "status" // status read after an action, not an action by itself
+	busyRefresh = "refresh"
+	busyFetch   = "fetch"
+	busyPull    = "pull"
+	busyCmd     = "cmd"
 )
 
 type row struct {
 	gf       entity.GitFolder
 	name     string // path relative to the root directory
+	dir      string // folder of the repository in name, empty at the root
+	base     string
 	loaded   bool
 	busy     string
-	fetched  bool // fetched during this session, remote changes are reliable
 	selected bool
 	note     string // result of the last action
 	noteOK   bool
 	incoming []string
+	outgoing []string
 	cmds     []entity.CmdInfo
+}
+
+// listLine is a line of the list: a repository, the heading of a folder or a blank line
+type listLine struct {
+	r      *row
+	folder string
+}
+
+func (l listLine) blank() bool {
+	return l.r == nil && l.folder == ""
 }
 
 type pendingAction struct {
@@ -55,11 +69,13 @@ type model struct {
 	root  string
 	depth int
 
-	rows    []*row
-	byPath  map[string]*row
-	visible []*row // rows matching the filter
-	cursor  int
-	offset  int
+	rows      []*row
+	byPath    map[string]*row
+	visible   []*row // rows matching the filter
+	lines     []listLine
+	collapsed map[string]bool // folders whose repositories are hidden
+	cursor    int
+	offset    int
 
 	mode        mode
 	discovering bool
@@ -67,6 +83,12 @@ type model struct {
 	detailPath  string
 	pending     *pendingAction
 	status      string
+	sorted      bool
+	morning     []string // commands of the morning routine
+
+	// progress of the running actions
+	batchKind  string
+	batchTotal int
 
 	filter   textinput.Model
 	cmdInput textinput.Model
@@ -97,12 +119,21 @@ func newModel(root string, depth int) *model {
 
 	spin := spinner.New()
 	spin.Spinner = spinner.MiniDot
-	spin.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
+	spin.Style = dimStyle
+
+	var morning []string
+	for _, cmd := range utils.GetMorningRoutine().Cmds {
+		if cmd = strings.TrimSpace(cmd); cmd != "" {
+			morning = append(morning, cmd)
+		}
+	}
 
 	return &model{
+		morning:     morning,
 		root:        root,
 		depth:       depth,
 		byPath:      map[string]*row{},
+		collapsed:   map[string]bool{},
 		discovering: true,
 		filter:      filter,
 		cmdInput:    cmdInput,
@@ -130,11 +161,17 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.discovering = false
 		var cmds []tea.Cmd
 		for _, path := range msg.paths {
-			r := &row{gf: entity.GitFolder{Path: path}, name: m.relName(path), busy: busyStatus}
+			r := &row{gf: entity.GitFolder{Path: path}, name: m.relName(path), busy: busyRefresh}
+			r.base = filepath.Base(r.name)
+			if dir := filepath.Dir(r.name); dir != "." {
+				r.dir = dir
+			}
 			m.rows = append(m.rows, r)
 			m.byPath[path] = r
 			cmds = append(cmds, statusCmd(path))
 		}
+		m.batchKind, m.batchTotal = busyRefresh, len(m.rows)
+		m.sortRows()
 		m.applyFilter()
 		cmd = tea.Batch(cmds...)
 
@@ -142,17 +179,16 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if r, ok := m.byPath[msg.gf.Path]; ok {
 			r.gf = msg.gf
 			r.incoming = msg.incoming
+			r.outgoing = msg.outgoing
 			r.loaded = true
 			r.busy = ""
 		}
+		m.resort()
 
 	case opMsg:
 		if r, ok := m.byPath[msg.path]; ok {
 			if msg.err != nil {
-				r.note, r.noteOK = msg.kind+" failed : "+msg.err.Error(), false
-			} else {
-				r.fetched = true
-				r.note, r.noteOK = msg.kind+" done", true
+				r.note, r.noteOK = msg.kind+" failed: "+msg.err.Error(), false
 			}
 			r.busy = busyStatus
 			cmd = statusCmd(msg.path)
@@ -168,10 +204,15 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			r.noteOK = failed == 0
-			if r.noteOK {
-				r.note = strconv.Itoa(len(msg.results)) + " command(s) succeeded"
-			} else {
-				r.note = strconv.Itoa(failed) + "/" + strconv.Itoa(len(msg.results)) + " command(s) failed"
+			switch {
+			case !r.noteOK && len(msg.results) == 1:
+				r.note = msg.results[0].Cmd + " failed"
+			case !r.noteOK:
+				r.note = strconv.Itoa(failed) + " of " + strconv.Itoa(len(msg.results)) + " commands failed"
+			case len(msg.results) == 1:
+				r.note = "ran " + msg.results[0].Cmd
+			default:
+				r.note = "ran " + strconv.Itoa(len(msg.results)) + " commands"
 			}
 			r.busy = busyStatus
 			cmd = statusCmd(msg.path)
@@ -281,11 +322,36 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 	case "pgdown":
 		m.moveCursor(m.listRows())
 	case "home", "g":
-		m.moveCursor(-len(m.visible))
+		m.moveCursor(-len(m.lines))
 	case "end", "G":
-		m.moveCursor(len(m.visible))
+		m.moveCursor(len(m.lines))
+	case "enter":
+		if folder := m.currentFolder(); folder != "" {
+			m.collapse(folder, !m.collapsed[folder])
+		}
+	case "left", "h":
+		if r := m.current(); r != nil {
+			m.collapse(r.dir, true)
+		} else {
+			m.collapse(m.currentFolder(), true)
+		}
+	case "right", "l":
+		m.collapse(m.currentFolder(), false)
+	case "z":
+		// Collapse all the folders, or expand them all when they already are
+		all := true
+		for _, r := range m.rows {
+			all = all && (r.dir == "" || m.collapsed[r.dir])
+		}
+		for _, r := range m.rows {
+			m.collapsed[r.dir] = !all && r.dir != ""
+		}
+		if m.filter.Value() != "" {
+			m.status = "Folders stay open while the list is filtered, esc to list all"
+		}
+		m.applyFilter()
 	case "tab":
-		m.detailFocus = m.current() != nil
+		m.detailFocus = len(m.lines) > 0
 	case "/":
 		m.mode = modeFilter
 		m.filter.Focus()
@@ -302,6 +368,15 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 		if r := m.current(); r != nil {
 			r.selected = !r.selected
 			m.moveCursor(1)
+		} else if rows := m.folderRows(m.currentFolder()); len(rows) > 0 {
+			// On a folder, all its repositories at once
+			all := true
+			for _, r := range rows {
+				all = all && r.selected
+			}
+			for _, r := range rows {
+				r.selected = !all
+			}
 		}
 	case "a":
 		all := true
@@ -322,9 +397,9 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 				nb++
 			}
 		}
-		m.status = strconv.Itoa(nb) + " repositories can be pulled"
+		m.status = plural(nb, "repository", "repositories") + " can be pulled"
 	case "r":
-		return m.start(busyStatus, func(r *row) tea.Cmd { return statusCmd(r.gf.Path) })
+		return m.start(busyRefresh, func(r *row) tea.Cmd { return statusCmd(r.gf.Path) })
 	case "f":
 		return m.start(busyFetch, func(r *row) tea.Cmd { return fetchCmd(r.gf.Path) })
 	case "p":
@@ -334,26 +409,20 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 					return nil
 				}
 				if r.gf.HasLocalChanges {
-					r.note, r.noteOK = "pull skipped : local changes", false
+					r.note, r.noteOK = "pull skipped, local changes", false
 					return nil
 				}
 				return pullCmd(r.gf.Path)
 			})
 		})
 	case "m":
-		var cmds []string
-		for _, cmd := range utils.GetMorningRoutine().Cmds {
-			if cmd = strings.TrimSpace(cmd); cmd != "" {
-				cmds = append(cmds, cmd)
-			}
-		}
-		if len(cmds) == 0 {
-			m.status = "No morning routine configured (morning_routine.commands in config file), use ! to run a command"
+		if len(m.morning) == 0 {
+			m.status = "No morning routine yet. Set morning_routine.commands in the config file, or press ! to run a command"
 			return nil
 		}
-		return m.runCommands(cmds)
+		return m.runCommands(m.morning)
 	case "!":
-		if m.current() != nil {
+		if len(m.targets()) > 0 {
 			m.mode = modeCommand
 			m.cmdInput.Focus()
 		}
@@ -362,6 +431,7 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 }
 
 // targets are the selected repositories or, if none, the one under the cursor
+// or all the ones of the folder under the cursor
 func (m *model) targets() []*row {
 	var targets []*row
 	for _, r := range m.rows {
@@ -371,21 +441,31 @@ func (m *model) targets() []*row {
 	}
 	if len(targets) == 0 && m.current() != nil {
 		targets = append(targets, m.current())
+	} else if len(targets) == 0 {
+		targets = m.folderRows(m.currentFolder())
 	}
 	return targets
 }
 
 // start launches an action on each target which is not already busy
 func (m *model) start(kind string, action func(r *row) tea.Cmd) tea.Cmd {
+	if m.running() == 0 {
+		m.batchTotal = 0
+	}
 	var cmds []tea.Cmd
 	for _, r := range m.targets() {
 		if r.busy != "" {
 			continue
 		}
+		r.note = ""
 		if cmd := action(r); cmd != nil {
 			r.busy = kind
 			cmds = append(cmds, cmd)
 		}
+	}
+	if len(cmds) > 0 {
+		m.batchKind = kind
+		m.batchTotal += len(cmds)
 	}
 	return tea.Batch(cmds...)
 }
@@ -397,7 +477,7 @@ func (m *model) confirm(label string, run func() tea.Cmd) tea.Cmd {
 		return run()
 	}
 	m.pending = &pendingAction{
-		question: label + " on " + strconv.Itoa(nb) + " repositories ? [y/N]",
+		question: label + " on " + strconv.Itoa(nb) + " repositories? [y/N]",
 		run:      run,
 	}
 	m.mode = modeConfirm
@@ -410,44 +490,173 @@ func (m *model) runCommands(cmds []string) tea.Cmd {
 	})
 }
 
-func (m *model) current() *row {
-	if m.cursor < 0 || m.cursor >= len(m.visible) {
-		return nil
+// running counts the repositories with an action in progress
+func (m *model) running() int {
+	nb := 0
+	for _, r := range m.rows {
+		if r.busy != "" && r.busy != busyStatus {
+			nb++
+		}
 	}
-	return m.visible[m.cursor]
+	return nb
 }
 
+// resort puts the repositories needing attention first. It waits for the running
+// actions to be done, so that rows do not move while they are being updated.
+func (m *model) resort() {
+	for _, r := range m.rows {
+		if r.busy != "" {
+			return
+		}
+	}
+	m.sortRows()
+	m.applyFilter()
+	if !m.sorted {
+		m.sorted = true
+		m.firstRow()
+	}
+}
+
+// sortRows keeps the repositories of a folder together, the ones needing attention first
+func (m *model) sortRows() {
+	sort.SliceStable(m.rows, func(i, j int) bool {
+		ri, rj := m.rows[i], m.rows[j]
+		if ri.dir != rj.dir {
+			return ri.dir < rj.dir
+		}
+		if si, sj := stateOf(ri), stateOf(rj); si != sj {
+			return si < sj
+		}
+		return ri.base < rj.base
+	})
+}
+
+// currentLine is the line of the list the cursor is on: a repository or a folder
+func (m *model) currentLine() listLine {
+	if m.cursor < 0 || m.cursor >= len(m.lines) {
+		return listLine{}
+	}
+	return m.lines[m.cursor]
+}
+
+func (m *model) current() *row {
+	return m.currentLine().r
+}
+
+func (m *model) currentFolder() string {
+	return m.currentLine().folder
+}
+
+// folderRows are the listed repositories of a folder
+func (m *model) folderRows(folder string) []*row {
+	var rows []*row
+	for _, r := range m.visible {
+		if r.dir == folder {
+			rows = append(rows, r)
+		}
+	}
+	return rows
+}
+
+// isCollapsed tells if the repositories of a folder are hidden. A filter opens all the folders.
+func (m *model) isCollapsed(folder string) bool {
+	return m.collapsed[folder] && m.filter.Value() == ""
+}
+
+// collapse hides or shows the repositories of a folder
+func (m *model) collapse(folder string, collapsed bool) {
+	if folder == "" {
+		return
+	}
+	if m.filter.Value() != "" {
+		m.status = "Folders stay open while the list is filtered, esc to list all"
+		return
+	}
+	m.collapsed[folder] = collapsed
+	m.applyFilter()
+}
+
+// firstRow puts the cursor on the first repository of the list
+func (m *model) firstRow() {
+	m.cursor, m.offset = 0, 0
+	for i, line := range m.lines {
+		if line.r != nil {
+			m.cursor = i
+			break
+		}
+	}
+	m.moveCursor(0)
+}
+
+// moveCursor moves the cursor by delta repositories or folders, the blank lines are skipped
 func (m *model) moveCursor(delta int) {
-	m.cursor += delta
-	if m.cursor > len(m.visible)-1 {
-		m.cursor = len(m.visible) - 1
+	step := 1
+	if delta < 0 {
+		step, delta = -1, -delta
 	}
-	if m.cursor < 0 {
-		m.cursor = 0
+	for ; delta > 0; delta-- {
+		next := m.cursor + step
+		for next >= 0 && next < len(m.lines) && m.lines[next].blank() {
+			next += step
+		}
+		if next < 0 || next >= len(m.lines) {
+			break
+		}
+		m.cursor = next
 	}
+	m.cursor = max(0, min(m.cursor, len(m.lines)-1))
+
+	// The line above the cursor is kept in sight: it is the folder of the repository,
+	// or the line the folder is pinned on while its repositories are scrolled
 	rows := m.listRows()
-	if m.cursor < m.offset {
-		m.offset = m.cursor
+	if m.cursor <= m.offset {
+		m.offset = max(0, m.cursor-1)
 	} else if m.cursor >= m.offset+rows {
 		m.offset = m.cursor - rows + 1
 	}
 }
 
 func (m *model) applyFilter() {
-	current := m.current()
+	current := m.currentLine()
 	filter := strings.ToLower(m.filter.Value())
 	m.visible = m.visible[:0]
-	m.cursor = 0
 	for _, r := range m.rows {
 		if filter == "" || strings.Contains(strings.ToLower(r.name), filter) {
-			if r == current {
-				m.cursor = len(m.visible)
-			}
 			m.visible = append(m.visible, r)
 		}
 	}
+
+	// The list has a heading per folder, and a blank line between folders
+	m.lines = m.lines[:0]
+	for i, r := range m.visible {
+		if i == 0 || r.dir != m.visible[i-1].dir {
+			// Collapsed folders are stacked
+			if i > 0 && !(m.isCollapsed(r.dir) && m.isCollapsed(m.visible[i-1].dir)) {
+				m.lines = append(m.lines, listLine{})
+			}
+			if r.dir != "" {
+				m.lines = append(m.lines, listLine{folder: r.dir})
+			}
+		}
+		if !m.isCollapsed(r.dir) {
+			m.lines = append(m.lines, listLine{r: r})
+		}
+	}
+
+	// The cursor stays where it was, or on the folder its repository is now hidden in
+	folder := current.folder
+	if current.r != nil && m.isCollapsed(current.r.dir) {
+		folder = current.r.dir
+	}
 	m.offset = 0
-	m.moveCursor(0)
+	for i, line := range m.lines {
+		if (current.r != nil && line.r == current.r) || (folder != "" && line.folder == folder) {
+			m.cursor = i
+			m.moveCursor(0)
+			return
+		}
+	}
+	m.firstRow()
 }
 
 // narrow terminals display only one pane at a time
@@ -456,29 +665,24 @@ func (m *model) narrow() bool {
 }
 
 func (m *model) listRows() int {
-	// borders and columns header
-	if rows := m.paneH - 3; rows > 1 {
-		return rows
-	}
-	return 1
+	return m.paneH
 }
 
 func (m *model) layout() {
-	// header, status and help lines
-	m.paneH = m.height - 3
-	if m.paneH < 5 {
-		m.paneH = 5
+	// header, bridge and its margin, status and keys lines
+	m.paneH = m.height - 5
+	if m.paneH < 3 {
+		m.paneH = 3
 	}
 	if m.narrow() {
-		m.listW, m.detailW = m.width, m.width
+		m.listW, m.detailW = m.width, m.width-2
 	} else {
-		m.listW = m.width * 55 / 100
-		m.detailW = m.width - m.listW
+		m.listW = m.width * 58 / 100
+		m.detailW = m.width - m.listW - dividerW
 	}
-	// borders and padding
-	m.detail.Width = m.detailW - 4
-	// borders and title
-	m.detail.Height = m.paneH - 3
+	m.detail.Width = m.detailW
+	// title
+	m.detail.Height = m.paneH - 1
 	m.filter.Width = m.width - 10
 	m.cmdInput.Width = m.width - 10
 	m.detailPath = ""
@@ -489,16 +693,17 @@ func (m *model) syncDetail() {
 	if m.width == 0 {
 		return
 	}
-	r := m.current()
-	if r == nil {
-		m.detail.SetContent("")
-		m.detailPath = ""
+	content, path := "", ""
+	if r := m.current(); r != nil {
+		content, path = m.detailContent(r), r.gf.Path
+	} else if folder := m.currentFolder(); folder != "" {
+		content, path = m.folderContent(folder), folder+"/"
+	} else {
 		m.detailFocus = false
-		return
 	}
-	m.detail.SetContent(lipgloss.NewStyle().Width(m.detail.Width).Render(m.detailContent(r)))
-	if m.detailPath != r.gf.Path {
-		m.detailPath = r.gf.Path
+	m.detail.SetContent(lipgloss.NewStyle().Width(m.detail.Width).Render(content))
+	if m.detailPath != path {
+		m.detailPath = path
 		m.detail.GotoTop()
 	}
 }

@@ -19,6 +19,7 @@ type discoveredMsg struct {
 type statusMsg struct {
 	gf       entity.GitFolder
 	incoming []string
+	outgoing []string
 }
 
 type opMsg struct {
@@ -46,6 +47,9 @@ func statusCmd(path string) tea.Cmd {
 		msg := statusMsg{gf: gitops.LocalStatus(path)}
 		if entity.HasRemoteChanges(msg.gf) {
 			msg.incoming = gitops.IncomingCommits(path, msg.gf.CurrentBranch)
+		}
+		if msg.gf.Ahead > 0 {
+			msg.outgoing = gitops.OutgoingCommits(path, msg.gf.CurrentBranch)
 		}
 		return msg
 	}

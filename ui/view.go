@@ -1,91 +1,190 @@
 package ui
 
 import (
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/yodamad/heimdall/commons"
-	"github.com/yodamad/heimdall/entity"
 )
 
 // Max number of output lines kept per command in the detail pane
 const maxOutputLines = 200
 
 const (
-	branchW = 16
-	localW  = 3
-	remoteW = 5
-	stateW  = 1
+	branchW  = 14
+	stateW   = 28
+	dividerW = 3
 )
 
-const helpText = `Navigation
+const helpText = `Move
   ↑/↓ j/k      move
   g/G          first / last repository
   pgup/pgdown  previous / next page
-  tab          focus details pane (scroll with ↑/↓), tab again to go back
+  tab          scroll the details, tab again to go back
   /            filter repositories by path
-  esc          clear filter, then selection
+  esc          clear the filter, then the selection
+  enter        collapse / expand the folder, also with ←/→
+  z            collapse / expand all the folders
 
-Selection
-  space        select / unselect repository
-  a            select / unselect all displayed repositories
-  u            select repositories which can be pulled
+Select
+  space        select / unselect the repository, or all the ones of the folder
+  a            select / unselect all the listed repositories
+  u            select the repositories which can be pulled
 
-Actions (on selected repositories, or the current one if none is selected)
-  r            refresh local status
-  f            git fetch
-  p            git pull (skipped if there are local changes)
-  m            run morning routine
+Act on the selected repositories, or if none on the current one or folder
+  r            read local status again
+  f            fetch
+  p            pull, skipped when there are local changes
+  m            run the morning routine
   !            run a command
 
-  ?            this help
   q            quit
 
-Remote changes are computed from the last fetch : they are displayed
-with a ~ until the repository is fetched from here.`
+Repositories needing attention come first in their folder. Nothing is fetched at startup:
+what the list knows about origin dates from the last fetch, press f to check origin.`
+
+var busyVerbs = map[string]string{
+	busyStatus:  "reading",
+	busyRefresh: "reading",
+	busyFetch:   "fetching",
+	busyPull:    "pulling",
+	busyCmd:     "running",
+}
 
 func (m *model) View() string {
 	if m.width == 0 {
 		return ""
 	}
 
-	var body string
+	var body []string
 	switch {
 	case m.mode == modeHelp:
-		body = paneStyle.Width(m.width-2).Height(m.paneH-2).Padding(0, 1).Render(helpText)
+		lines := strings.Split(helpText, "\n")
+		for _, line := range lines {
+			// Short terminals get the help without its blank lines
+			if line != "" || len(lines) <= m.paneH {
+				body = append(body, " "+fit(line, m.width-1))
+			}
+		}
 	case m.narrow() && m.detailFocus:
-		body = m.detailPane()
+		for _, line := range m.detailLines() {
+			body = append(body, " "+line)
+		}
 	case m.narrow():
-		body = m.listPane()
+		body = m.listLines()
 	default:
-		body = lipgloss.JoinHorizontal(lipgloss.Top, m.listPane(), m.detailPane())
+		divider := dimStyle.Render(" │ ")
+		if m.detailFocus {
+			divider = lipgloss.NewStyle().Foreground(selectColor).Render(" │ ")
+		}
+		detail := m.detailLines()
+		for i, line := range m.listLines() {
+			if i < len(detail) {
+				line += divider + detail[i]
+			}
+			body = append(body, line)
+		}
 	}
-	return m.headerLine() + "\n" + body + "\n" + m.statusLine() + "\n" + m.helpLine()
+	for len(body) < m.paneH {
+		body = append(body, "")
+	}
+	return m.headerLine() + "\n" + m.bridgeLine() + "\n\n" + strings.Join(body[:m.paneH], "\n") + "\n" + m.statusLine() + "\n" + m.keysLine()
 }
 
 func (m *model) headerLine() string {
-	nbSelected, nbBusy := 0, 0
+	badge := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#10141C")).Background(selectColor)
+	if commons.NoColor {
+		badge = lipgloss.NewStyle().Bold(true).Reverse(true)
+	}
+	const badgeW = 12 // " Heimdall " and its margins
+
+	// On the right, what is running or else where heimdall is looking
+	right := strings.TrimSuffix(m.root, "/")
+	if home, err := os.UserHomeDir(); err == nil && strings.HasPrefix(right, home) {
+		right = "~" + strings.TrimPrefix(right, home)
+	}
+	if running := m.running(); running > 0 && m.batchTotal > 0 {
+		right = busyVerbs[m.batchKind] + " " + strconv.Itoa(m.batchTotal-running) + " of " + strconv.Itoa(m.batchTotal)
+	}
+
+	// The count of repositories in each state, in the color of the state
+	type count struct {
+		text  string
+		style lipgloss.Style
+	}
+	counts := []count{{plural(len(m.rows), "repository", "repositories"), boldStyle}}
+	if m.discovering {
+		counts[0].text = "looking for repositories"
+	}
+	byState := m.countByState()
+	for st := stateBroken; st <= stateLoading; st++ {
+		if byState[st] > 0 {
+			counts = append(counts, count{strconv.Itoa(byState[st]) + " " + stateNames[st], lipgloss.NewStyle().Foreground(stateColors[st])})
+		}
+	}
+
+	// The least urgent counts give way first on a narrow terminal, the right part before them
+	width := func() int {
+		w := badgeW
+		for _, c := range counts {
+			w += lipgloss.Width(c.text) + 2
+		}
+		return w
+	}
+	if width()+lipgloss.Width(right)+1 > m.width {
+		right = ""
+	}
+	for len(counts) > 1 && width() > m.width {
+		counts = counts[:len(counts)-1]
+	}
+
+	line := " " + badge.Render(" Heimdall ") + " "
+	for _, c := range counts {
+		line += c.style.Render(c.text) + "  "
+	}
+	if gap := m.width - width() - lipgloss.Width(right) - 1; right != "" && gap >= 0 {
+		line += strings.Repeat(" ", gap) + dimStyle.Render(right)
+	}
+	return line
+}
+
+func (m *model) countByState() map[state]int {
+	byState := map[state]int{}
 	for _, r := range m.rows {
-		if r.selected {
-			nbSelected++
+		byState[stateOf(r)]++
+	}
+	return byState
+}
+
+// bridgeLine draws the share of each state among the repositories as a colored band,
+// from the most urgent on the left: the Bifröst that Heimdall watches over.
+func (m *model) bridgeLine() string {
+	width := m.width - 2
+	if commons.NoColor || len(m.rows) == 0 || width < 10 {
+		return ""
+	}
+
+	byState := m.countByState()
+	cells, used, widest := map[state]int{}, 0, stateClean
+	for st, nb := range byState {
+		// Even a single repository is worth being seen
+		cells[st] = max(1, nb*width/len(m.rows))
+		used += cells[st]
+		if cells[st] > cells[widest] {
+			widest = st
 		}
-		if r.busy != "" {
-			nbBusy++
+	}
+	cells[widest] += width - used
+
+	line := " "
+	for st := stateBroken; st <= stateLoading; st++ {
+		if cells[st] > 0 {
+			line += lipgloss.NewStyle().Background(stateColors[st]).Render(strings.Repeat(" ", cells[st]))
 		}
 	}
-	infos := strconv.Itoa(len(m.rows)) + " repositories"
-	if len(m.visible) != len(m.rows) {
-		infos += " · " + strconv.Itoa(len(m.visible)) + " displayed"
-	}
-	if nbSelected > 0 {
-		infos += " · " + strconv.Itoa(nbSelected) + " selected"
-	}
-	if nbBusy > 0 {
-		infos += " · " + strconv.Itoa(nbBusy) + " running"
-	}
-	infos += " · " + m.root
-	return titleStyle.Render(" Heimdall ") + dimStyle.Render(fit(infos, m.width-10))
+	return line
 }
 
 func (m *model) statusLine() string {
@@ -101,224 +200,459 @@ func (m *model) statusLine() string {
 		return warnStyle.Render(fit(" "+m.status, m.width))
 	}
 	if m.filter.Value() != "" {
-		return dimStyle.Render(fit(" filter: "+m.filter.Value(), m.width))
+		return dimStyle.Render(fit(" Filtered on \""+m.filter.Value()+"\", esc to list all", m.width))
 	}
 	return ""
 }
 
-func (m *model) helpLine() string {
-	help := "? help · ↑↓ move · space select · / filter · f fetch · p pull · m morning · ! cmd · r refresh · tab details · q quit"
+// keysLine lists the keys which do something right now, and on how many repositories
+func (m *model) keysLine() string {
+	var keys []string
 	switch {
 	case m.mode == modeFilter:
-		help = "enter apply · esc clear"
+		keys = []string{"enter keep filter", "esc list all"}
 	case m.mode == modeCommand:
-		help = "enter run · esc cancel"
+		keys = []string{"enter run", "esc cancel"}
 	case m.mode == modeConfirm:
-		help = "y confirm · any other key cancel"
+		keys = []string{"y confirm", "any other key cancel"}
 	case m.mode == modeHelp:
-		help = "press any key to go back"
+		keys = []string{"any key go back"}
 	case m.detailFocus:
-		help = "↑↓ scroll · tab back to repositories · q quit"
+		keys = []string{"↑↓ scroll", "tab back to the list", "q quit"}
+	case len(m.rows) == 0:
+		keys = []string{"q quit"}
+	default:
+		targets := m.targets()
+		nbSelected, nbPullable := 0, 0
+		for _, r := range targets {
+			if r.selected {
+				nbSelected++
+			}
+			if r.loaded && r.gf.Err == "" && !r.gf.HasLocalChanges {
+				nbPullable++
+			}
+		}
+		on := ""
+		if nbSelected > 0 {
+			on = " " + strconv.Itoa(nbSelected) + " selected"
+		}
+		if folder := m.currentFolder(); folder != "" {
+			if m.isCollapsed(folder) {
+				keys = append(keys, "enter expand")
+			} else {
+				keys = append(keys, "enter collapse")
+			}
+			if nbSelected == 0 {
+				on = " " + strconv.Itoa(len(targets)) + " in folder"
+			}
+		}
+		if len(targets) > 0 {
+			keys = append(keys, "f fetch"+on)
+			switch {
+			case nbPullable == 0:
+			case nbPullable < len(targets):
+				keys = append(keys, "p pull "+strconv.Itoa(nbPullable)+" of "+strconv.Itoa(len(targets)))
+			default:
+				keys = append(keys, "p pull"+on)
+			}
+			if len(m.morning) > 0 {
+				keys = append(keys, "m morning routine")
+			}
+			keys = append(keys, "! run a command", "space select", "tab details")
+		}
+		keys = append(keys, "/ filter", "? all keys")
 	}
-	return dimStyle.Render(fit(" "+help, m.width))
+	return dimStyle.Render(fit(" "+strings.Join(keys, "   "), m.width))
 }
 
-func (m *model) listPane() string {
-	width := m.listW - 2
-	style := paneStyle
-	if !m.detailFocus {
-		style = focusStyle
-	}
-	style = style.Width(width).Height(m.paneH - 2)
-
+func (m *model) listLines() []string {
 	if m.discovering {
-		return style.Render(" " + m.spin.View() + " Looking for git folders in " + m.root)
+		return []string{" " + m.spin.View() + " Looking for git folders in " + m.root}
 	}
 	if len(m.rows) == 0 {
-		return style.Render(fit(" No git folder found, is "+m.root+" the correct path ?", width))
-	}
-
-	selW := 2
-	if commons.NoColor {
-		selW = 4
-	}
-	// cursor, selection mark and a space between each column
-	nameW := width - 2 - selW - branchW - localW - remoteW - stateW - 4
-	if nameW < 8 {
-		nameW = 8
-	}
-
-	lines := []string{dimStyle.Render(fit(strings.Repeat(" ", 2+selW)+fit("repository", nameW)+" "+fit("branch", branchW)+" "+fit("loc", localW)+" "+fit("rem", remoteW), width))}
-	end := m.offset + m.listRows()
-	if end > len(m.visible) {
-		end = len(m.visible)
-	}
-	for i := m.offset; i < end; i++ {
-		lines = append(lines, m.rowLine(m.visible[i], i == m.cursor, nameW))
+		return []string{
+			fit(" No git folder in "+m.root, m.listW),
+			dimStyle.Render(fit(" Start heimdall with -w to look in another directory, or -d to look deeper.", m.listW)),
+		}
 	}
 	if len(m.visible) == 0 {
-		lines = append(lines, dimStyle.Render(" No repository matches the filter"))
+		return []string{dimStyle.Render(fit(" No repository matches \""+m.filter.Value()+"\", esc to list all", m.listW))}
 	}
-	return style.Render(strings.Join(lines, "\n"))
+
+	lines := make([]string, 0, m.paneH)
+	end := min(m.offset+m.listRows(), len(m.lines))
+	for i := m.offset; i < end; i++ {
+		line := m.lines[i]
+		switch {
+		case line.r != nil && i == m.offset && i > 0 && line.r.dir != "":
+			// The folder stays in sight while its repositories are scrolled
+			lines = append(lines, m.folderLine(line.r.dir, false))
+		case line.r != nil:
+			lines = append(lines, m.rowLine(line.r, i == m.cursor))
+		case line.folder != "":
+			lines = append(lines, m.folderLine(line.folder, i == m.cursor))
+		default:
+			lines = append(lines, strings.Repeat(" ", m.listW))
+		}
+	}
+	for len(lines) < m.paneH {
+		lines = append(lines, strings.Repeat(" ", m.listW))
+	}
+	return lines
 }
 
-func (m *model) rowLine(r *row, isCursor bool, nameW int) string {
-	cursor := "  "
-	if isCursor {
-		cursor = "▸ "
-		if commons.NoColor {
-			cursor = "> "
+// folderStates counts the listed repositories of a folder in each state needing attention
+func (m *model) folderStates(folder string) (map[state][]*row, int) {
+	rows := m.folderRows(folder)
+	byState := map[state][]*row{}
+	for _, r := range rows {
+		byState[stateOf(r)] = append(byState[stateOf(r)], r)
+	}
+	return byState, len(rows)
+}
+
+// folderLine is the heading of the repositories of a folder: the path to it stays
+// quiet, its own name stands out, followed by how many repositories are listed in it.
+// A collapsed folder tells what its hidden repositories need.
+func (m *model) folderLine(folder string, isCursor bool) string {
+	paint := func(style lipgloss.Style, text string) string {
+		if isCursor && commons.NoColor {
+			style = style.Reverse(true)
+		} else if isCursor {
+			style = style.Background(cursorColor)
 		}
+		return style.Render(text)
+	}
+	collapsed := m.isCollapsed(folder)
+	byState, nb := m.folderStates(folder)
+
+	marker := "▾"
+	switch {
+	case collapsed && commons.NoColor:
+		marker = "+"
+	case collapsed:
+		marker = "▸"
+	case commons.NoColor:
+		marker = "-"
 	}
 
-	selected := "  "
-	if commons.NoColor {
-		selected = "[ ] "
-		if r.selected {
-			selected = "[x] "
-		}
-	} else if r.selected {
-		selected = "● "
+	count := "  " + strconv.Itoa(nb)
+	name := strings.TrimSpace(fitLeft(folder, m.listW-3-lipgloss.Width(count)))
+	parent := ""
+	if i := strings.LastIndex(name, "/"); i >= 0 {
+		parent, name = name[:i+1], name[i+1:]
 	}
+	line := paint(dimStyle, " "+marker+" "+parent) + paint(boldStyle, name) + paint(dimStyle, count)
+	used := 3 + lipgloss.Width(parent+name+count)
 
-	nameStyle := lipgloss.NewStyle()
+	if collapsed {
+		for st := stateBroken; st < stateClean; st++ {
+			text := "   " + strconv.Itoa(len(byState[st])) + " " + stateNames[st]
+			if len(byState[st]) > 0 && used+lipgloss.Width(text) <= m.listW {
+				line += paint(lipgloss.NewStyle().Foreground(stateColors[st]), text)
+				used += lipgloss.Width(text)
+			}
+		}
+	}
+	return line + paint(lipgloss.NewStyle(), strings.Repeat(" ", max(0, m.listW-used)))
+}
+
+// folderContent tells which repositories of a folder need attention
+func (m *model) folderContent(folder string) string {
+	byState, nb := m.folderStates(folder)
+	var b strings.Builder
+	b.WriteString(plural(nb, "repository", "repositories") + "\n")
+	for st := stateBroken; st <= stateLoading; st++ {
+		rows := byState[st]
+		if len(rows) == 0 {
+			continue
+		}
+		b.WriteString("\n" + lipgloss.NewStyle().Foreground(stateColors[st]).Render(strconv.Itoa(len(rows))+" "+stateNames[st]) + "\n")
+		if st >= stateClean {
+			continue
+		}
+		for _, r := range rows {
+			b.WriteString(fit(r.base, m.detail.Width-stateW-2) + "  " + dimStyle.Render(stateText(r)) + "\n")
+		}
+	}
+	return b.String()
+}
+
+// stateText says in plain words what state the repository is in
+func stateText(r *row) string {
+	if r.gf.Err != "" {
+		return r.gf.Err
+	}
+	var parts []string
+	if nb := len(r.gf.ChangedFiles); nb > 0 {
+		parts = append(parts, strconv.Itoa(nb)+" changed")
+	}
+	if nb := behind(r.gf); nb > 0 {
+		parts = append(parts, strconv.Itoa(nb)+" behind")
+	}
+	if r.gf.Ahead > 0 {
+		parts = append(parts, strconv.Itoa(r.gf.Ahead)+" ahead")
+	}
+	switch {
+	case len(parts) > 0:
+		return strings.Join(parts, ", ")
+	case r.gf.RemoteURL == "":
+		return "no remote"
+	case strings.TrimSpace(r.gf.RemoteChanges) == "":
+		return "branch not on " + commons.RemoteName
+	case stale(r.gf):
+		return fetchAge(r.gf)
+	}
+	return "up to date"
+}
+
+func (m *model) rowLine(r *row, isCursor bool) string {
+	st := stateOf(r)
+	paint := func(style lipgloss.Style, text string) string {
+		if isCursor && commons.NoColor {
+			style = style.Reverse(true)
+		} else if isCursor {
+			style = style.Background(cursorColor)
+		}
+		return style.Render(text)
+	}
+	plain := lipgloss.NewStyle()
+
+	mark := " "
+	nameStyle := plain
+	if st == stateClean || st == stateLoading {
+		nameStyle = dimStyle
+	}
 	if r.selected {
-		nameStyle = selectStyle
-	}
-	if isCursor {
-		nameStyle = nameStyle.Bold(true)
+		mark = "●"
+		if commons.NoColor {
+			mark = "*"
+		}
+		nameStyle = lipgloss.NewStyle().Foreground(selectColor).Bold(true)
 	}
 
-	state := " "
+	text, textStyle := stateText(r), lipgloss.NewStyle().Foreground(stateColors[st])
 	switch {
 	case r.busy != "":
-		state = m.spin.View()
+		text, textStyle = busyVerbs[r.busy]+"…", dimStyle
 	case r.note != "" && r.noteOK:
-		state = okStyle.Render("✓")
+		text, textStyle = r.note, okStyle
 	case r.note != "":
-		state = koStyle.Render("✗")
+		text, textStyle = r.note, koStyle
 	}
 
-	return titleStyle.Render(cursor) + selectStyle.Render(selected) +
-		nameStyle.Render(fitLeft(r.name, nameW)) + " " +
-		dimStyle.Render(fit(r.gf.CurrentBranch, branchW)) + " " +
-		localCell(r) + " " + remoteCell(r) + " " + state
+	nameW := m.listW - 3 - 2 - stateW
+	branch := ""
+	if nameW-branchW-2 >= 16 {
+		nameW -= branchW + 2
+		branch = paint(dimStyle, fit(r.gf.CurrentBranch, branchW)+"  ")
+	}
+
+	return paint(plain, " ") +
+		paint(lipgloss.NewStyle().Foreground(selectColor), mark) +
+		paint(nameStyle, " "+fit(r.base, nameW)+"  ") +
+		branch +
+		paint(textStyle, fit(text, stateW))
 }
 
-func localCell(r *row) string {
-	switch {
-	case !r.loaded:
-		return dimStyle.Render(fit("…", localW))
-	case r.gf.Err != "":
-		return koStyle.Render(fit("!", localW))
-	case r.gf.HasLocalChanges && commons.NoColor:
-		return fit("KO", localW)
-	case r.gf.HasLocalChanges:
-		return koStyle.Render(fit("●", localW))
-	case commons.NoColor:
-		return fit("OK", localW)
-	}
-	return okStyle.Render(fit("●", localW))
-}
-
-func remoteCell(r *row) string {
-	behind := strings.TrimSpace(r.gf.RemoteChanges)
-	if !r.loaded || behind == "" {
-		return dimStyle.Render(fit("-", remoteW))
-	}
-	text, style := "✓", okStyle
-	if commons.NoColor {
-		text = "OK"
-	}
-	if entity.HasRemoteChanges(r.gf) {
-		text, style = "↓"+behind, koStyle
-	}
-	if !r.fetched {
-		text, style = "~"+text, dimStyle
-	}
-	return style.Render(fit(text, remoteW))
-}
-
-func (m *model) detailPane() string {
-	style := paneStyle
-	if m.detailFocus {
-		style = focusStyle
-	}
-	title := ""
+func (m *model) detailLines() []string {
+	name := m.currentFolder()
 	if r := m.current(); r != nil {
-		title = r.name
+		name = r.name
 	}
-	return style.Width(m.detailW-2).Height(m.paneH-2).Padding(0, 1).
-		Render(titleStyle.Render(fitLeft(title, m.detail.Width)) + "\n" + m.detail.View())
+	if name == "" {
+		return nil
+	}
+	title := boldStyle
+	if m.detailFocus {
+		title = title.Foreground(selectColor)
+	}
+	return append([]string{title.Render(fitLeft(name, m.detailW))}, strings.Split(m.detail.View(), "\n")...)
+}
+
+// verdict tells what state the repository is in, and what can be done about it
+func verdict(r *row) string {
+	if r.gf.Err != "" {
+		return koStyle.Render("This repository can't be read: " + r.gf.Err)
+	}
+
+	nbBehind, nbChanged := behind(r.gf), len(r.gf.ChangedFiles)
+	// Each count has the color of the state it puts the repository in
+	var parts []string
+	part := func(st state, text string) {
+		if len(parts) == 0 {
+			text = strings.ToUpper(text[:1]) + text[1:]
+		}
+		parts = append(parts, lipgloss.NewStyle().Foreground(stateColors[st]).Render(text))
+	}
+	if nbBehind > 0 {
+		part(stateBehind, plural(nbBehind, "commit", "commits")+" behind "+commons.RemoteName)
+	}
+	if r.gf.Ahead > 0 {
+		part(stateAhead, plural(r.gf.Ahead, "commit", "commits")+" not pushed")
+	}
+	if nbChanged > 0 {
+		part(stateDirty, plural(nbChanged, "file", "files")+" changed")
+	}
+
+	var sentences []string
+	switch {
+	case len(parts) > 0:
+		sentences = append(sentences, strings.Join(parts, ", ")+".")
+	case r.gf.RemoteURL == "":
+		sentences = append(sentences, "Nothing to commit. This repository has no "+commons.RemoteName+" remote.")
+	case strings.TrimSpace(r.gf.RemoteChanges) == "":
+		sentences = append(sentences, "Nothing to commit. This branch is not on "+commons.RemoteName+".")
+	default:
+		sentences = append(sentences, "Up to date with "+commons.RemoteName+", nothing to commit.")
+	}
+
+	switch {
+	case nbBehind > 0 && r.gf.Ahead > 0:
+		sentences = append(sentences, "Local and "+commons.RemoteName+" have diverged, merge or rebase from a shell.")
+	case nbBehind > 0 && nbChanged > 0:
+		sentences = append(sentences, "Pull is blocked until you commit or stash.")
+	case nbBehind > 0:
+		sentences = append(sentences, "Press p to pull.")
+	}
+
+	if stale(r.gf) {
+		age := fetchAge(r.gf)
+		sentences = append(sentences, dimStyle.Render(strings.ToUpper(age[:1])+age[1:]+", press f to check "+commons.RemoteName+"."))
+	}
+	return strings.Join(sentences, " ")
 }
 
 func (m *model) detailContent(r *row) string {
 	var b strings.Builder
-	field := func(label string, value string) {
-		b.WriteString(dimStyle.Render(fit(label, 8)) + value + "\n")
+	section := func(title string, nb int) {
+		b.WriteString("\n" + boldStyle.Render(title))
+		if nb > 0 {
+			b.WriteString(" " + dimStyle.Render(strconv.Itoa(nb)))
+		}
+		b.WriteString("\n")
 	}
-	section := func(title string) {
-		b.WriteString("\n" + boldStyle.Render(title) + "\n")
+	// indented keeps a wrapped block of text apart from the command it is the output of
+	indented := func(text string) {
+		text = lipgloss.NewStyle().Width(m.detail.Width - 2).Render(text)
+		for _, line := range strings.Split(text, "\n") {
+			b.WriteString("  " + line + "\n")
+		}
 	}
 
-	field("Path", r.gf.Path)
 	if !r.loaded {
-		b.WriteString("\n" + m.spin.View() + " Loading...")
-		return b.String()
-	}
-	if r.gf.CurrentBranch != "" {
-		field("Branch", r.gf.CurrentBranch)
-	}
-	if r.gf.RemoteURL != "" {
-		field("Remote", strings.TrimSpace(r.gf.ConnectionType+" "+r.gf.RemoteURL))
-	} else {
-		field("Remote", dimStyle.Render("no "+commons.RemoteName+" remote"))
-	}
-	if r.gf.Err != "" {
-		field("Error", koStyle.Render(r.gf.Err))
+		return dimStyle.Render("Reading status…")
 	}
 
-	if behind := strings.TrimSpace(r.gf.RemoteChanges); behind != "" {
-		sync := "↑" + strconv.Itoa(r.gf.Ahead) + " ↓" + behind
-		if !r.fetched {
-			sync += dimStyle.Render("  since last fetch, press f to update")
-		}
-		field("Sync", sync)
+	// Where the repository is: branch, remote and how fresh the knowledge of it is
+	b.WriteString(boldStyle.Render(r.gf.CurrentBranch))
+	if remoteW := m.detail.Width - lipgloss.Width(r.gf.CurrentBranch) - 2; r.gf.RemoteURL != "" && remoteW > 0 {
+		b.WriteString("  " + dimStyle.Render(strings.TrimSpace(fit(shortRemote(r.gf.RemoteURL), remoteW))))
 	}
-	if r.note != "" {
-		style := koStyle
-		if r.noteOK {
-			style = okStyle
-		}
-		field("Last", style.Render(r.note))
+	b.WriteString("\n\n")
+
+	text := verdict(r)
+	if age := fetchAge(r.gf); r.gf.RemoteURL != "" && !stale(r.gf) {
+		text += " " + dimStyle.Render(strings.ToUpper(age[:1])+age[1:]+".")
 	}
+	if r.note != "" && !r.noteOK {
+		text += "\n" + koStyle.Render(strings.ToUpper(r.note[:1])+r.note[1:])
+	}
+	b.WriteString(text + "\n")
 
 	if len(r.gf.ChangedFiles) > 0 {
-		section("Local changes (" + strconv.Itoa(len(r.gf.ChangedFiles)) + ")")
-		b.WriteString(strings.Join(r.gf.ChangedFiles, "\n") + "\n")
-	} else if r.gf.Err == "" {
-		b.WriteString("\n" + okStyle.Render("No local changes") + "\n")
+		section("Changed files", len(r.gf.ChangedFiles))
+		for _, file := range r.gf.ChangedFiles {
+			b.WriteString(changedFile(file) + "\n")
+		}
 	}
 
-	if len(r.incoming) > 0 {
-		section("Incoming commits (" + strconv.Itoa(len(r.incoming)) + ")")
-		b.WriteString(strings.Join(r.incoming, "\n") + "\n")
+	commits := func(title string, st state, commits []string) {
+		if len(commits) == 0 {
+			return
+		}
+		section(title, len(commits))
+		for _, commit := range commits {
+			fields := strings.SplitN(commit, "\t", 3)
+			if len(fields) != 3 {
+				b.WriteString(commit + "\n")
+				continue
+			}
+			// One line per commit: the subject gives way to the hash and the age
+			hash, age := fields[0], strings.TrimSuffix(fields[1], " ago")
+			subjectW := m.detail.Width - lipgloss.Width(hash) - lipgloss.Width(age) - 3
+			if subjectW < 10 {
+				age, subjectW = "", m.detail.Width-lipgloss.Width(hash)-1
+			}
+			b.WriteString(lipgloss.NewStyle().Foreground(stateColors[st]).Render(hash) + " " + fit(fields[2], subjectW) + "  " + dimStyle.Render(age) + "\n")
+		}
 	}
+	commits("Incoming", stateBehind, r.incoming)
+	commits("Not pushed", stateAhead, r.outgoing)
 
 	if len(r.cmds) > 0 {
-		section("Commands")
+		section("Commands", 0)
 		for _, cmd := range r.cmds {
 			if cmd.ExitCode == 0 {
 				b.WriteString(okStyle.Render("✓ "+cmd.Cmd) + "\n")
 			} else {
-				b.WriteString(koStyle.Render("✗ "+cmd.Cmd+" (exit code "+strconv.Itoa(cmd.ExitCode)+")") + "\n")
+				b.WriteString(koStyle.Render("✗ "+cmd.Cmd) + dimStyle.Render("  exit code "+strconv.Itoa(cmd.ExitCode)) + "\n")
 			}
 			if output := cleanOutput(cmd.Output); output != "" {
-				b.WriteString(dimStyle.Render(output) + "\n")
+				indented(output)
 			}
 		}
 	}
 	return b.String()
+}
+
+// shortRemote keeps the host and the path of a remote URL
+func shortRemote(remoteURL string) string {
+	remote := strings.TrimSuffix(remoteURL, ".git")
+	if i := strings.Index(remote, "://"); i >= 0 {
+		remote = remote[i+3:]
+	} else if at := strings.Index(remote, "@"); at >= 0 {
+		// scp-like syntax, user@host:path
+		remote = strings.Replace(remote, ":", "/", 1)
+	}
+	if at := strings.Index(remote, "@"); at >= 0 {
+		remote = remote[at+1:]
+	}
+	return remote
+}
+
+// changedFile turns a line of git status --porcelain into words, colored as the
+// state they put the repository in: local work to commit, or work ready to be.
+func changedFile(line string) string {
+	if len(line) < 4 {
+		return line
+	}
+	index, worktree, path := line[0], line[1], strings.Trim(line[3:], "\"")
+
+	words := map[byte]string{'M': "modified", 'T': "modified", 'A': "added", 'D': "deleted", 'R': "renamed", 'C': "copied"}
+	word, style := "changed", lipgloss.NewStyle().Foreground(stateColors[stateDirty])
+	switch {
+	case index == 'U' || worktree == 'U' || (index == worktree && (index == 'A' || index == 'D')):
+		word, style = "conflict", koStyle
+	case index == '?':
+		word, style = "untracked", dimStyle
+	case worktree != ' ':
+		if w, ok := words[worktree]; ok {
+			word = w
+		}
+	default:
+		// Everything is in the index
+		word, style = "staged", okStyle
+		if w, ok := words[index]; ok && index != 'M' {
+			word = w
+		}
+	}
+
+	dir, file := "", path
+	if i := strings.LastIndex(strings.TrimSuffix(path, "/"), "/"); i >= 0 {
+		dir, file = path[:i+1], path[i+1:]
+	}
+	return style.Render(fit(word, 10)) + dimStyle.Render(dir) + file
 }
 
 func cleanOutput(output string) string {

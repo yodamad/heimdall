@@ -6,10 +6,22 @@ Running `heimdall` without any command (or `heimdall tui`, `heimdall ui`) opens 
 heimdall -w ~/work
 ```
 
-The left pane lists the repositories found in the [work directory](flags.md#work-directory----work-dir-or--w), the right one gives the details of the current repository : branch, remote, local changes, incoming commits and the output of the last commands run on it.
+The list shows the repositories found in the [work directory](flags.md#work-directory----work-dir-or--w), grouped by folder, the ones needing attention first in each folder. Next to it are the details of the current repository : what state it is in and what you can do about it, its changed files, incoming commits and the output of the last commands run on it.
+
+## Reading the list
+
+The state of each repository is written in plain words on its right, in a color telling how urgent it is.
+
+| Color | State |
+|---|---|
+| Red | Diverged from origin, or the repository can't be read |
+| Orange | Behind origin |
+| Yellow | Local changes |
+| Green | Commits not pushed |
+| Gray | Up to date |
 
 !!!info "No network at startup"
-    To be displayed quickly, the list is built from local information only. Remote changes are computed from the last fetch and are displayed with a `~` until the repository is fetched from the TUI with ++f++.
+    To be displayed quickly, the list is built from local information only, so what it knows about origin dates from the last fetch. When this fetch is more than a day old, the details tell its age : press ++f++ to check origin.
 
 The other commands (`git-info`, `git-clone`, `good-morning`, `env-info`) are still available for a non-interactive usage.
 
@@ -20,6 +32,8 @@ The other commands (`git-info`, `git-clone`, `good-morning`, `env-info`) are sti
 | ++up++ / ++down++ or ++j++ / ++k++ | Move |
 | ++g++ / ++shift+g++ | First / last repository |
 | ++tab++ | Focus the details pane to scroll in it, ++tab++ again to go back |
+| ++enter++ or ++left++ / ++right++ | Collapse / expand the folder |
+| ++z++ | Collapse / expand all the folders |
 | ++slash++ | Filter repositories by path |
 | ++esc++ | Clear the filter, then the selection |
 | ++question++ | Help |
@@ -27,11 +41,13 @@ The other commands (`git-info`, `git-clone`, `good-morning`, `env-info`) are sti
 
 ## Selection
 
-Actions are run on the selected repositories or, if none is selected, on the current one.
+Actions are run on the selected repositories or, if none is selected, on the current one. With the cursor on a folder, they are run on all its repositories.
+
+A collapsed folder tells what its repositories need, and the details list the ones needing attention.
 
 | Key | Action |
 |---|---|
-| ++space++ | Select / unselect the current repository |
+| ++space++ | Select / unselect the current repository, or all the ones of the current folder |
 | ++a++ | Select / unselect all the displayed repositories |
 | ++u++ | Select the repositories which can be pulled |
 
