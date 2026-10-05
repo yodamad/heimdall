@@ -121,7 +121,15 @@ func Pull(path string) error {
 	if err != nil {
 		return err
 	}
-	return fetched(path, worktree.Pull(&git.PullOptions{RemoteName: commons.RemoteName, Auth: auth}))
+	options := &git.PullOptions{RemoteName: commons.RemoteName, Auth: auth}
+	// Without a reference, go-git pulls the HEAD of the remote instead of the current branch
+	if head, err := repo.Head(); err == nil && head.Name().IsBranch() {
+		options.ReferenceName = head.Name()
+		if branch, err := repo.Branch(head.Name().Short()); err == nil && branch.Merge != "" {
+			options.ReferenceName = branch.Merge
+		}
+	}
+	return fetched(path, worktree.Pull(options))
 }
 
 // fetched records a successful fetch, being already up-to-date is one
