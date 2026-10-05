@@ -82,9 +82,9 @@ announce:
     enabled: true
     username: yodamad03.bsky.social
     message_template: |
-      🚀 Heimdall {{ .Tag }} is out!
+      👀 Heimdall {{ .Tag }} is out!
 
-      A CLI to help with your git directories.
+      A TUI/CLI to help with your git directories.
 
       {{ .ReleaseURL }}
 
