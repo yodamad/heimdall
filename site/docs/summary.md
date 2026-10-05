@@ -5,6 +5,7 @@
     * [📝 Log file](flags/#log-directory-log-dir-or-l)
     * [🏗️ Work directory](flags/#work-directory-work-dir-or-w)
     * [🗣️ Verbose](flags/#verbose-mode-verbose-or-v)
+* [🖥️ TUI](tui.md)
 * [ℹ️ Git-info](git-info.md)
     * [🤿 Search depth](git-info/#search-depth-depth-or-d)
     * [🎮 Interactive mode](git-info/#interactive-mode-interactive-mode-or-i)

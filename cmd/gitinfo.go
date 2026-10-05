@@ -3,23 +3,20 @@ package cmd
 import (
 	"fmt"
 	"io/fs"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing/transport/http"
-	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/yodamad/heimdall/commons"
 	"github.com/yodamad/heimdall/entity"
+	"github.com/yodamad/heimdall/gitops"
 	"github.com/yodamad/heimdall/utils"
 	"github.com/yodamad/heimdall/utils/tui"
 )
@@ -364,56 +361,13 @@ func selectItems(items []entity.GitFolder, fn filterFolder) []entity.GitFolder {
 }
 
 func gitFetch(repo *git.Repository, spinner *tea.Program) (string, error) {
-	connectionType := ""
-	fetchOptions := &git.FetchOptions{}
-	remote, err := repo.Remote(commons.RemoteName)
-	if err != nil {
-		if commons.Verbose && spinner != nil {
-			spinner.Send(tui.ErrorMessage{Error: err.Error()})
-		} else {
-			utils.TraceWarn("Cannot get remote : " + err.Error())
-		}
-		return "", err
-	}
-	origin := remote.Config().URLs[0]
-	if strings.Contains(origin, "@") {
-		connectionType = "SSH"
-		re := regexp.MustCompile(`(?P<User>[^@]+)@(?P<Host>[^:]+)`)
-		user := re.FindStringSubmatch(origin)
-
-		var publicKey *ssh.PublicKeys
-		sshKey := utils.GetPublicKey(user[2], spinner)
-		if sshKey == "" {
-			return "", nil
-		}
-		fileContent, _ := os.ReadFile(sshKey)
-		publicKey, _ = ssh.NewPublicKeys(user[1], fileContent, utils.GetPublicKeyPassword(user[2], spinner))
-		fetchOptions.Auth = publicKey
-	} else if strings.HasPrefix(origin, "http") {
-		gitUrl, err := url.Parse(origin)
-		if err != nil {
-			if commons.Verbose && spinner != nil {
-				spinner.Send(tui.ErrorMessage{Error: err.Error()})
-			} else {
-				utils.TraceWarn("Cannot parse URL : " + err.Error())
-			}
-			return "", err
-		}
-		hostname := strings.TrimPrefix(gitUrl.Hostname(), "www.")
-		connectionType = strings.ToUpper(gitUrl.Scheme)
-		if utils.GetToken(hostname, spinner) != "" {
-			fetchOptions.Auth = &http.BasicAuth{Password: utils.GetToken(hostname, spinner)}
-		}
-	}
-	return connectionType, repo.Fetch(fetchOptions)
+	return gitops.FetchRepo(repo, spinner)
 }
 
 func gitPull(folder entity.GitFolder) {
-	repo, _ := git.PlainOpen(folder.Path)
-	worktree, _ := repo.Worktree()
-	err := worktree.Pull(&git.PullOptions{RemoteName: "origin"})
-	if err != nil {
-		utils.TraceWarn(utils.ColorString("Cannot pull : [red]" + err.Error()))
+	if err := gitops.Pull(folder.Path); err != nil {
+		utils.TraceWarn(utils.ColorString("Cannot pull [bold]" + folder.Path + "[reset] : [red]" + err.Error()))
+		return
 	}
 	utils.Trace(utils.ColorString("✅ [bold]"+folder.Path+"[reset] pulled"), false)
 }

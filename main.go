@@ -18,13 +18,17 @@ var rootCmd = &cobra.Command{
 [yellow]Heimdall[default] is a CLI tool to help you with your git folders.
 You can check, update, ... everything easily
           `),
-	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		utils.PrintBanner()
-	},
+	Args:    cobra.ArbitraryArgs,
 	Example: utils.ColorString("[light_blue]heimdall -h"),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		cmd.Help()
+	RunE: func(c *cobra.Command, args []string) error {
+		if len(args) == 0 && cmd.IsTerminal() {
+			cmd.RunTui()
+			return nil
+		}
+		c.Help()
+		if len(args) == 0 {
+			return nil
+		}
 		utils.Trace("", false)
 		utils.Trace(utils.ColorString("🚨 [light_red]Unknown command: [bold][yellow]"+args[0]), false)
 		return nil
@@ -36,6 +40,7 @@ func init() {
 	rootCmd.AddCommand(cmd.GitClone)
 	rootCmd.AddCommand(cmd.EnvInfo)
 	rootCmd.AddCommand(cmd.GoodMorning)
+	rootCmd.AddCommand(cmd.Tui)
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DefaultLogFolder, "log directory")
 	rootCmd.PersistentFlags().StringVarP(&commons.WorkDir, "work-dir", "w", commons.DefaultWorkDir, "work directory")

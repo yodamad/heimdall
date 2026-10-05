@@ -64,6 +64,9 @@ var Verbose bool
 // Interactive /* Interactive mode */
 var Interactive bool
 
+// TUIMode /* TUI is running, nothing must be printed on stdout */
+var TUIMode bool
+
 // NoColor /* No color output */
 var NoColor bool
 

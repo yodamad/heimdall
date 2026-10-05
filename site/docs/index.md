@@ -9,6 +9,8 @@ For now, Heimdall has 2 main commands :
 - [Git-info](git-info.md) to help you manage all your git repositories and now their current branch, if they have some local changes or if they are behind the remote repository
 - [Git-clone](git-clone.md) to clone a git repository and keep the same path 
 
+Run without any command, Heimdall opens a [TUI](tui.md) to navigate through your git repositories and run actions on one or several of them.
+
 ## How to install
 
 __*On MacOS:*__
