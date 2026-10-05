@@ -27,3 +27,19 @@ For each platform, you can define the following elements (some can reference an 
 | `type` | The type of platform (github, gitlab) | ❌ |
 | `public_key` | The path to the public key to use for SSH connection | ❌ |
 | `public_key_passphrase` | The passphrase to use for the public key | ✅ |
+
+## Morning routine
+
+The commands of your morning routine, run by [good-morning](good-morning.md) and by the ++m++ key of the [TUI](tui.md), are defined in the `morning_routine` element.
+
+```yaml
+morning_routine:
+  shell: zsh
+  commands: git fetch, git pull
+```
+
+| Element | Description |
+|---------|-------------|
+| `commands` | The commands to run in each repository, separated by a comma |
+| `shell` | The shell used to run them, `bash` by default |
+| `ohmyzsh` | Set it to `true` to run them in a login interactive shell (`-lic`), so that the aliases of your shell are available |

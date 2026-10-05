@@ -6,9 +6,17 @@ Running `heimdall` without any command (or `heimdall tui`, `heimdall ui`) opens 
 heimdall -w ~/work
 ```
 
+![TUI demo](./assets/heimdall-tui-demo.gif)
+
 The list shows the repositories found in the [work directory](flags.md#work-directory----work-dir-or--w) as the tree of the folders they are in, like a file navigator : each folder lists its folders, then its repositories, the ones needing attention first. A folder holding nothing but another folder shares its line with it. Next to it are the details of the current repository : what state it is in and what you can do about it, the output of the last commands run on it, its changed files, its incoming and not pushed commits, its branches and its last commits.
 
+On a terminal less than 80 columns wide, the list and the details are displayed one at a time : ++tab++ goes from one to the other.
+
 ## Reading the list
+
+Above the list, the header tells how many repositories are in each state, and the colored band below it shows the share of each of them, the most urgent on the left. On the right is the directory Heimdall is looking in or, while actions are running, how many of them are done.
+
+Each repository is listed with the branch it is on, when there is room for it, and its state.
 
 The state of each repository is written in plain words on its right, in a color telling how urgent it is.
 
@@ -19,6 +27,9 @@ The state of each repository is written in plain words on its right, in a color 
 | Yellow | Local changes |
 | Teal | Commits not pushed |
 | Green | Up to date |
+| Grey | Nothing to do, but it can't be told to be up to date : no remote, branch not on origin, or last fetch more than a day old |
+
+While an action is running on a repository, its state is replaced by what is being done. Then the result of the action is displayed instead, until the next one.
 
 !!!info "No network at startup"
     To be displayed quickly, the list is built from local information only, so what it knows about origin dates from the last fetch. When this fetch is more than a day old, the details tell its age : press ++f++ to check origin.
@@ -30,7 +41,8 @@ The other commands (`git-info`, `git-clone`, `good-morning`, `env-info`) are sti
 | Key | Action |
 |---|---|
 | ++up++ / ++down++ or ++j++ / ++k++ | Move |
-| ++g++ / ++shift+g++ | First / last repository |
+| ++g++ / ++shift+g++ or ++home++ / ++end++ | First / last repository |
+| ++page-up++ / ++page-down++ | Previous / next page |
 | ++tab++ | Go to the details, ++tab++ again to go back |
 | ++enter++ | Collapse / expand the folder |
 | ++left++ or ++h++ | Collapse the folder, or go to the folder the line is in |
@@ -73,9 +85,10 @@ Press ++tab++ to go to the details, then :
 
 | Key | Action |
 |---|---|
-| ++up++ / ++down++ or ++j++ / ++k++ | Choose a branch |
+| ++up++ / ++down++ or ++j++ / ++k++ | Choose a branch, or scroll the details when there is only one |
 | ++enter++ | Switch to the chosen branch with `git switch` |
 | ++page-up++ / ++page-down++ | Scroll the details |
+| ++tab++ or ++esc++ | Go back to the list |
 
 When git refuses to switch, because of local changes for instance, the details tell why.
 
@@ -83,8 +96,12 @@ When git refuses to switch, because of local changes for instance, the details t
 
 ### Search depth: `--depth` or `-d`
 
-By default, it searches no more then 3 levels of subdirectories, you can override this with the `-d` flag of the `tui` command.
+By default, it searches no more than 3 levels of subdirectories, you can override this with the `-d` flag of the `tui` command.
 
 ```bash
 heimdall tui -d 5
 ```
+
+### Global flags
+
+The [global flags](flags.md) are available too. With `--no-color`, the states are told by their text only and the colored band is not displayed.
