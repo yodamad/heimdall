@@ -4,11 +4,12 @@ A CLI to help with your git directories (for now 😉).
 
 Based on the myth of the Nordic God, [Heimdall](https://en.wikipedia.org/wiki/Heimdall), the CLI is here to ease with your multiple Git repositories.
 
-For now, Heimdall has 4 main commands :
+For now, Heimdall has 5 main commands :
 
 - [Git-info](https://yodamad.github.io/heimdall/git-info) to help you manage all your git repositories and now their current branch, if they have some local changes or if they are behind the remote repository
 - [Git-clone](https://yodamad.github.io/heimdall/git-clone) to clone a git repository or all repositories of a group (in GitHub or GitLab) and keep the same path
 - [Good-morning](https://yodamad.github.io/heimdall/good-morning) to run your morning routine on all your git repositories (like `git pull` or `git status` for example)
+- [Credentials](https://yodamad.github.io/heimdall/credentials) to check the tokens of your platforms against their API and update the ones which are missing or expired, stored in the keyring of your system
 - [Env-info](https://yodamad.github.io/heimdall/env-info) to display useful information about your environment (like kubectl contexts, helm repositories, docker contexts...)
 
 Run without any command, `heimdall` opens a [TUI](https://yodamad.github.io/heimdall/tui) to navigate through your git repositories, see their state and run actions (fetch, pull, morning routine, any command) on one or several of them.

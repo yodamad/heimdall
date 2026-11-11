@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 
 	"github.com/mitchellh/colorstring"
@@ -45,14 +46,26 @@ func TraceWarn(msg string) {
 }
 
 func OverrideLogFile() {
-	if commons.LogDir != commons.DefaultLogFolder {
-		os.RemoveAll("heimdall.log")
-		f, _ := os.OpenFile(commons.LogDir+"/heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		log.SetOutput(f)
-		Trace(ColorString("📝 Log file written in [light_blue]"+commons.LogDir+"/heimdall.log"), false)
-	} else {
+	if commons.LogDir == commons.DefaultLogFolder {
 		Trace(ColorString("📝 Log file written in [light_blue]"+commons.DefaultLogFolder+"heimdall.log"), false)
+		return
 	}
+
+	path := filepath.Join(commons.LogDir, "heimdall.log")
+	// The log records the hosts, the names of the keyring entries and the authentication failures, so
+	// it is for its owner only. A log directory can be a shared one, where the file may already be a
+	// symlink planted by someone else : appending to it would write as the user running Heimdall.
+	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		TraceWarn("Not writing the log in " + path + " : it is a symbolic link")
+		return
+	}
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
+	if err != nil {
+		TraceWarn("Cannot write the log in " + path + " : " + err.Error())
+		return
+	}
+	log.SetOutput(f)
+	Trace(ColorString("📝 Log file written in [light_blue]"+path), false)
 }
 
 // Inspired from https://github.com/acarl005/stripansi/blob/master/stripansi.go

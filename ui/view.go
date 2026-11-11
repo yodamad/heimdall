@@ -51,6 +51,12 @@ In the details
   ↑/↓ j/k      choose a branch of the repository, pgup/pgdown to scroll
   enter        switch to the chosen branch
 
+Credentials
+  c            check the token of each platform, and update the ones which need it
+  space a      choose the platforms sharing the credential to store
+  enter        store a new secret in the keyring for the chosen platforms
+  r            check the credentials again
+
   q           quit
 
 A folder lists its folders, then its repositories, the ones needing attention first. Nothing is fetched at startup:
@@ -80,6 +86,8 @@ func (m *model) View() string {
 				body = append(body, " "+fit(line, m.width-1))
 			}
 		}
+	case m.mode == modeCreds:
+		body = m.credsLines()
 	case m.narrow() && m.detailFocus:
 		for _, line := range m.detailLines() {
 			body = append(body, " "+line)
@@ -207,6 +215,8 @@ func (m *model) statusLine() string {
 		return " " + m.cmdInput.View()
 	case modeConfirm:
 		return warnStyle.Render(fit(" "+m.pending.question, m.width))
+	case modeCreds:
+		return m.credsPrompt()
 	}
 	if m.status != "" {
 		return warnStyle.Render(fit(" "+m.status, m.width))
@@ -229,6 +239,8 @@ func (m *model) keysLine() string {
 		keys = []string{"y confirm", "any other key cancel"}
 	case m.mode == modeHelp:
 		keys = []string{"any key go back"}
+	case m.mode == modeCreds:
+		keys = m.credsKeys()
 	case m.detailFocus && len(m.branchChoices()) > 0:
 		keys = []string{"↑↓ choose a branch"}
 		if branch := m.branchChoices()[m.branchCursor]; !branch.Current {
@@ -278,7 +290,7 @@ func (m *model) keysLine() string {
 			}
 			keys = append(keys, "! run a command", "space select", "tab details")
 		}
-		keys = append(keys, "/ filter", "? all keys")
+		keys = append(keys, "/ filter", "c credentials", "? all keys")
 	}
 	return dimStyle.Render(fit(" "+strings.Join(keys, "   "), m.width))
 }

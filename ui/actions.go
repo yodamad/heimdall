@@ -1,9 +1,14 @@
 package ui
 
 import (
+	"context"
+
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/yodamad/heimdall/commons"
+	"github.com/yodamad/heimdall/creds"
 	"github.com/yodamad/heimdall/entity"
 	"github.com/yodamad/heimdall/gitops"
+	"github.com/yodamad/heimdall/secrets"
 	"github.com/yodamad/heimdall/utils"
 )
 
@@ -88,6 +93,36 @@ func switchCmd(path string, branch string) tea.Cmd {
 		workers <- struct{}{}
 		defer func() { <-workers }()
 		return opMsg{path: path, kind: busySwitch, err: gitops.Switch(path, branch)}
+	}
+}
+
+type credCheckedMsg struct {
+	results []creds.Result
+}
+
+type credSavedMsg struct {
+	hosts []string
+	entry string
+	err   error
+}
+
+// credCheckCmd checks the credentials of every configured platform. It only reads.
+func credCheckCmd() tea.Cmd {
+	return func() tea.Msg {
+		return credCheckedMsg{results: creds.CheckAll(context.Background(), nil, creds.DefaultExpiryWindow)}
+	}
+}
+
+// credSaveCmd stores the secret in the keyring and points the platforms at it. The secret lives only
+// in this closure : it is never put on the model, in a message or in a note.
+func credSaveCmd(entry, value string, hosts []string) tea.Cmd {
+	return func() tea.Msg {
+		msg := credSavedMsg{hosts: hosts, entry: entry}
+		if msg.err = secrets.Set(entry, value); msg.err != nil {
+			return msg
+		}
+		msg.err = creds.SetPlatformFields(commons.InputConfigFile, hosts, creds.FieldToken, commons.KeyringPrefix+entry)
+		return msg
 	}
 }
 

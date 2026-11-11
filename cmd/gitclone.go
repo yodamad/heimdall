@@ -9,15 +9,20 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/yodamad/heimdall/commons"
+	"github.com/yodamad/heimdall/creds"
 	"github.com/yodamad/heimdall/utils"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"net/url"
 	"os"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var hostname, keepSuffix, isGroupClone bool
+
+// apiTimeout caps a call to the API of a platform while listing the repositories of a group
+const apiTimeout = 30 * time.Second
 
 var GitClone = &cobra.Command{
 	Use:     "git-clone",
@@ -60,6 +65,12 @@ func clone(urlArg string) {
 	if isGroupClone {
 		parsedUrl, _ := url.Parse(urlArg)
 		hostnameOfRepo := parsedUrl.Hostname()
+		// A platform declared without a token is listed, so that the credentials command can fix it,
+		// but calling the API with no token would only fail with a confusing error
+		if !utils.IsComplete(hostnameOfRepo) {
+			utils.TraceWarn(utils.ColorString("[light_yellow]No usable credential for [blue]" + hostnameOfRepo + "[light_yellow]. Run [blue]heimdall credentials check[light_yellow] to see why"))
+			return
+		}
 		switch utils.GetPlatformType(hostnameOfRepo) {
 		case "gitlab":
 			cloneGitlabGroup(urlArg)
@@ -80,9 +91,12 @@ func cloneGitlabGroup(groupUrl string) {
 
 	utils.Trace(utils.ColorString("[light_blue] Listing projects in [yellow]GitLab[light_blue] group [cyan]"+groupPath), false)
 
-	gitlabClient, err := gitlab.NewClient(utils.GetToken(hostnameOfRepo, nil))
+	// The client has to be built for this host : a self hosted instance has its API on its own host,
+	// and talking to gitlab.com with its token would fail in a confusing way
+	gitlabClient, err := creds.GitLabClient(hostnameOfRepo, utils.GetToken(hostnameOfRepo, nil), apiTimeout)
 	if err != nil {
 		utils.TraceWarn("Impossible to log to " + hostnameOfRepo)
+		return
 	}
 
 	projects, _, err := gitlabClient.Groups.ListGroupProjects(strings.TrimPrefix(groupPath, "/"), &gitlab.ListGroupProjectsOptions{
@@ -107,8 +121,12 @@ func cloneGithubGroup(orgUrl string) {
 
 	utils.Trace(utils.ColorString("[light_blue] Listing projects in [yellow]GitHub[light_blue] organization [cyan]"+orgUrl), false)
 
-	token := utils.GetToken(hostnameOfOrg, nil)
-	githubClient := github.NewClient(nil).WithAuthToken(token)
+	// Built for this host too, so that a GitHub Enterprise organization is listed on its own instance
+	githubClient, err := creds.GitHubClient(hostnameOfOrg, utils.GetToken(hostnameOfOrg, nil), apiTimeout)
+	if err != nil {
+		utils.TraceWarn("Impossible to log to " + hostnameOfOrg)
+		return
+	}
 	cleanUrl := strings.TrimSuffix(strings.TrimPrefix(orgPath, "/"), "/")
 	repos, _, err := githubClient.Repositories.ListByOrg(context.Background(), cleanUrl, &github.RepositoryListByOrgOptions{})
 	if err != nil {

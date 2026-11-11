@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -13,7 +14,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 	"github.com/yodamad/heimdall/commons"
+	"github.com/yodamad/heimdall/creds"
 	"github.com/yodamad/heimdall/entity"
+	"github.com/yodamad/heimdall/gitops"
+	"github.com/yodamad/heimdall/secrets"
 	"github.com/yodamad/heimdall/utils"
 )
 
@@ -25,6 +29,7 @@ const (
 	modeCommand
 	modeConfirm
 	modeHelp
+	modeCreds
 )
 
 const (
@@ -108,10 +113,24 @@ type model struct {
 	batchKind  string
 	batchTotal int
 
-	filter   textinput.Model
-	cmdInput textinput.Model
-	detail   viewport.Model
-	spin     spinner.Model
+	// the credentials screen : what the check found, which platforms are chosen, and which step of
+	// the update is being asked. The secret itself is never kept here, only in credInput while it is
+	// typed, masked.
+	creds        []creds.Result
+	credCursor   int
+	credPicked   map[string]bool
+	credStep     credStep
+	credEntry    string
+	credNote     string
+	credChecking bool
+	// credOffer is the platform a failed fetch or pull blamed, offered for an update by the c key
+	credOffer string
+
+	filter    textinput.Model
+	cmdInput  textinput.Model
+	credInput textinput.Model
+	detail    viewport.Model
+	spin      spinner.Model
 
 	width, height int
 	paneH         int
@@ -134,6 +153,9 @@ func newModel(root string, depth int) *model {
 	cmdInput := textinput.New()
 	cmdInput.Prompt = "! "
 	cmdInput.Placeholder = "command to run"
+	credInput := textinput.New()
+	// A token can be long, and the default limit would truncate it without saying so
+	credInput.CharLimit = 2048
 
 	spin := spinner.New()
 	spin.Spinner = spinner.MiniDot
@@ -155,6 +177,8 @@ func newModel(root string, depth int) *model {
 		discovering: true,
 		filter:      filter,
 		cmdInput:    cmdInput,
+		credInput:   credInput,
+		credPicked:  map[string]bool{},
 		detail:      viewport.New(0, 0),
 		spin:        spin,
 	}
@@ -207,10 +231,44 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if r, ok := m.byPath[msg.path]; ok {
 			if msg.err != nil {
 				r.note, r.noteOK = msg.kind+" failed: "+msg.err.Error(), false
+				// A credential problem is worth offering to fix, instead of only being displayed
+				var authErr *gitops.AuthError
+				if errors.As(msg.err, &authErr) && authErr.Host != "" {
+					m.credOffer = authErr.Host
+					m.status = "Press c to update the " + authErr.Kind + " for " + authErr.Host
+				}
 			}
 			r.busy = busyStatus
 			cmd = statusCmd(msg.path)
 		}
+
+	case credCheckedMsg:
+		m.credChecking = false
+		m.creds = msg.results
+		if m.credCursor >= len(m.creds) {
+			m.credCursor = max(0, len(m.creds)-1)
+		}
+
+	case credSavedMsg:
+		if msg.err != nil {
+			m.credNote = "Nothing was saved : " + msg.err.Error()
+			break
+		}
+		m.credPicked = map[string]bool{}
+		m.credOffer = ""
+		// The platforms have to be read again, and the entry may have been replaced behind the cache
+		secrets.Forget(msg.entry)
+		if err := utils.ReloadConfig(); err != nil {
+			m.credNote = "Saved, but the config file could not be read again : " + err.Error()
+			break
+		}
+		m.credNote = "Saved. " + plural(len(msg.hosts), "platform", "platforms") + " now read from the keyring entry " + msg.entry
+		// Check the new credential, and fetch again what was failing because of the old one
+		cmds := []tea.Cmd{m.recheckCreds()}
+		if rows := m.rowsForHosts(msg.hosts); len(rows) > 0 {
+			cmds = append(cmds, m.startOn(busyFetch, rows, func(r *row) tea.Cmd { return fetchCmd(r.gf.Path) }))
+		}
+		cmd = tea.Batch(cmds...)
 
 	case cmdMsg:
 		if r, ok := m.byPath[msg.path]; ok {
@@ -309,6 +367,9 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 	case modeHelp:
 		m.mode = modeList
 		return nil
+
+	case modeCreds:
+		return m.handleCredsKey(key)
 	}
 
 	if m.detailFocus {
@@ -347,6 +408,13 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 		return tea.Quit
 	case "?":
 		m.mode = modeHelp
+	case "c":
+		if m.credOffer != "" {
+			host := m.credOffer
+			m.credOffer = ""
+			return m.openCredsFor(host)
+		}
+		return m.openCreds()
 	case "up", "k":
 		m.moveCursor(-1)
 	case "down", "j":
@@ -518,11 +586,32 @@ func (m *model) switchBranch() tea.Cmd {
 
 // start launches an action on each target which is not already busy
 func (m *model) start(kind string, action func(r *row) tea.Cmd) tea.Cmd {
+	return m.startOn(kind, m.targets(), action)
+}
+
+// rowsForHosts are the repositories whose origin is on one of these platforms, which is what has to
+// be fetched again once their credential was updated
+func (m *model) rowsForHosts(hosts []string) []*row {
+	wanted := make(map[string]bool, len(hosts))
+	for _, host := range hosts {
+		wanted[host] = true
+	}
+	var rows []*row
+	for _, r := range m.rows {
+		if r.gf.RemoteURL != "" && wanted[gitops.HostOf(r.gf.RemoteURL)] {
+			rows = append(rows, r)
+		}
+	}
+	return rows
+}
+
+// startOn launches an action on each of these rows which is not already busy
+func (m *model) startOn(kind string, rows []*row, action func(r *row) tea.Cmd) tea.Cmd {
 	if m.running() == 0 {
 		m.batchTotal = 0
 	}
 	var cmds []tea.Cmd
-	for _, r := range m.targets() {
+	for _, r := range rows {
 		if r.busy != "" {
 			continue
 		}
@@ -812,6 +901,7 @@ func (m *model) layout() {
 	m.detail.Height = m.paneH - 1
 	m.filter.Width = m.width - 10
 	m.cmdInput.Width = m.width - 10
+	m.credInput.Width = m.width - 20
 	m.detailPath = ""
 	m.moveCursor(0)
 }

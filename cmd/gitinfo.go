@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -188,6 +189,13 @@ func checkIfUpToDate(path string, spinner *tea.Program) (git.Status, error) {
 		return nil, err
 	} else {
 		connectionType, err := gitFetch(repo, spinner)
+		// A credential problem is reported, but must not make the repository disappear from the
+		// listing : what is known locally is still worth displaying
+		var authErr *gitops.AuthError
+		if errors.As(err, &authErr) {
+			utils.TraceWarn(utils.ColorString("[light_yellow]" + path + " : " + authErr.Error()))
+			err = nil
+		}
 		if err != nil && err.Error() != "already up-to-date" {
 			return nil, err
 		} else {

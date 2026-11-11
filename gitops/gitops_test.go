@@ -148,3 +148,29 @@ func TestStatusFetchPull(t *testing.T) {
 		t.Errorf("expected to be on spike : %+v", gf)
 	}
 }
+
+// An https remote may hold a user too. Taking it for an ssh one sent the user looking for a key
+// instead of a token, and reported a missing ssh key for a repository cloned over https.
+func TestConnectionTypeAndHostOfLookAtTheSchemeFirst(t *testing.T) {
+	cases := []struct {
+		remote     string
+		connection string
+		host       string
+	}{
+		{"https://github.com/yodamad/heimdall.git", "HTTPS", "github.com"},
+		{"https://yodamad@github.com/yodamad/heimdall.git", "HTTPS", "github.com"},
+		{"http://user@gitlab.corp.example/group/repo.git", "HTTP", "gitlab.corp.example"},
+		{"https://www.github.com/yodamad/heimdall.git", "HTTPS", "github.com"},
+		{"git@github.com:yodamad/heimdall.git", "SSH", "github.com"},
+		{"ssh://git@gitlab.corp.example:2222/group/repo.git", "SSH", "gitlab.corp.example"},
+		{"/a/local/path", "", ""},
+	}
+	for _, c := range cases {
+		if got := ConnectionType(c.remote); got != c.connection {
+			t.Errorf("ConnectionType(%q) = %q, expected %q", c.remote, got, c.connection)
+		}
+		if got := HostOf(c.remote); got != c.host {
+			t.Errorf("HostOf(%q) = %q, expected %q", c.remote, got, c.host)
+		}
+	}
+}

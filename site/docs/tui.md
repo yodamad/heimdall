@@ -76,6 +76,27 @@ A confirmation is asked before pulling or running commands on several repositori
 | ++p++ | `git pull`, skipped for repositories with local changes |
 | ++m++ | Run the morning routine defined in the [configuration file](config.md) |
 | ++exclam++ | Run a command |
+| ++c++ | Open the [credentials](#credentials) screen |
+
+## Credentials
+
+Press ++c++ to open the credentials screen. It shows one line per platform of the [configuration file](config.md) : where its token comes from (the keyring, an environment variable or the file itself, never the token) and the verdict of its API : valid, expiring, rejected, no token...
+
+!!!info "Nothing is checked until you ask"
+    Consistent with the no network at startup promise above, no credential is checked when Heimdall starts. The platforms are checked when you open this screen with ++c++, and again with ++r++.
+
+| Key | Action |
+|---|---|
+| ++up++ / ++down++ or ++j++ / ++k++ | Move |
+| ++space++ | Select / unselect a platform |
+| ++a++ | Select / unselect all the platforms |
+| ++enter++ | Update the credential of the selected platforms, or of the current one when none is selected |
+| ++r++ | Check the platforms again |
+| ++esc++ | Back to the list |
+
+Updating asks for the name of a keyring entry, then for the secret, which is never displayed. Several selected platforms share one entry, so that a token used by several of them is rotated once. The same operations, and more, are available from the command line with [credentials](credentials.md).
+
+When a fetch or a pull fails because of a credential, the message tells which platform and what is wrong (token, SSH key or passphrase), and offers ++c++ to fix it, with this platform already selected.
 
 ## Branches
 

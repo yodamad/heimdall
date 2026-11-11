@@ -76,6 +76,9 @@ var InputConfigFile = DefaultConfFolder + DefaultConfigFile
 // EnvVariable /* Prefix for env. variable in config file */
 const EnvVariable = "env."
 
+// KeyringPrefix /* Prefix for an entry of the keyring of the operating system in config file */
+const KeyringPrefix = "keyring."
+
 var HelpMessageTemplate = colorstring.Color(`[light_blue]            _               _       _ _
   /\  /\___(_)_ __ ___   __| | __ _| | |
  / /_/ / _ \ | '_ `+"`"+` _ \ / _`+"`"+` |/ _`+"`"+` | | |

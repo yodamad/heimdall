@@ -40,6 +40,7 @@ func init() {
 	rootCmd.AddCommand(cmd.GitClone)
 	rootCmd.AddCommand(cmd.EnvInfo)
 	rootCmd.AddCommand(cmd.GoodMorning)
+	rootCmd.AddCommand(cmd.Credentials)
 	rootCmd.AddCommand(cmd.Tui)
 	rootCmd.PersistentFlags().BoolVarP(&commons.Verbose, "verbose", "v", false, "verbose output")
 	rootCmd.PersistentFlags().StringVarP(&commons.LogDir, "log-dir", "l", commons.DefaultLogFolder, "log directory")
@@ -47,12 +48,12 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&commons.InputConfigFile, "config-file", "c", commons.InputConfigFile, "config file")
 	rootCmd.PersistentFlags().BoolVarP(&commons.NoColor, "no-color", "n", false, "no color output")
 
-	// Create directory for configuration
+	// Create directory for configuration. It holds the config file, which may reference credentials,
+	// so it is readable by its owner only.
 	_, err := os.Stat(commons.DefaultConfFolder)
 	if os.IsNotExist(err) {
-		err := os.Mkdir(commons.DefaultConfFolder, os.ModePerm)
-		if err != nil {
-			fmt.Errorf("Cannot create dir " + err.Error())
+		if err := os.Mkdir(commons.DefaultConfFolder, 0700); err != nil {
+			fmt.Println("Cannot create dir " + commons.DefaultConfFolder + " : " + err.Error())
 			commons.DefaultConfFolder = os.TempDir()
 		}
 	}
@@ -60,9 +61,8 @@ func init() {
 	// Create cache directory for logs
 	_, err = os.Stat(commons.DefaultLogFolder)
 	if os.IsNotExist(err) {
-		err := os.Mkdir(commons.DefaultLogFolder, os.ModePerm)
-		if err != nil {
-			fmt.Errorf("Cannot create dir " + err.Error())
+		if err := os.Mkdir(commons.DefaultLogFolder, 0700); err != nil {
+			fmt.Println("Cannot create dir " + commons.DefaultLogFolder + " : " + err.Error())
 			commons.DefaultLogFolder = os.TempDir()
 		}
 	}
@@ -72,7 +72,7 @@ func init() {
 	})
 	// Output to stdout instead of the default stderr
 	// Can be any io.Writer, see below for File example
-	f, _ := os.OpenFile(commons.DefaultLogFolder+"/heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	f, _ := os.OpenFile(commons.DefaultLogFolder+"/heimdall.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	log.SetOutput(f)
 
 	// Only log the warning severity or above.
