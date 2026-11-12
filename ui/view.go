@@ -54,6 +54,10 @@ Activity
   L                show what Heimdall is doing, esc to go back
   ↑/↓ pgup/pgdown  scroll the activity, G to follow the last lines again
 
+  While an action runs on several repositories, a panel under the list says
+  how far along it is, what each repository is busy with, and what has failed.
+  It goes away once the run is over.
+
 In the details
   ↑/↓ j/k      choose a branch of the repository, pgup/pgdown to scroll
   enter        switch to the chosen branch
@@ -116,9 +120,17 @@ func (m *model) View() string {
 			body = append(body, line)
 		}
 	}
-	for len(body) < m.paneH {
+	// A bulk run docks its panel at the bottom of the pane : the lines it takes are the last ones
+	// of the list, which is where the eye is the least busy while nothing can be acted on anyway
+	var panel []string
+	if m.runPanelOn() {
+		panel = m.runPanel()
+	}
+	for len(body) < m.paneH-len(panel) {
 		body = append(body, "")
 	}
+	body = append(body[:m.paneH-len(panel)], panel...)
+
 	return m.headerLine() + "\n" + m.bridgeLine() + "\n\n" + strings.Join(body[:m.paneH], "\n") + "\n" + m.statusLine() + "\n" + m.keysLine()
 }
 
@@ -136,7 +148,10 @@ func (m *model) headerLine() string {
 	}
 	// What runs now is the most useful thing on this line: it gets a badge of its own
 	rightStyle := dimStyle
-	if running := m.running(); running > 0 && m.batchTotal > 0 {
+	// The panel owns the progress of the run while it is up : reading the same count twice on one
+	// screen teaches nothing. The badge comes back when the panel cannot be shown, which is on a
+	// short terminal and on the screens taking the whole pane.
+	if running := m.running(); running > 0 && m.batchTotal > 0 && !m.runPanelOn() {
 		right = " ⟳ " + busyVerbs[m.batchKind] + " " + strconv.Itoa(m.batchTotal-running) + " of " + strconv.Itoa(m.batchTotal) + " "
 		rightStyle = activityStyle
 		if commons.NoColor {

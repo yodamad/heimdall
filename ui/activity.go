@@ -174,6 +174,10 @@ func (m *model) logPane() []string {
 // logFooter is the last thing which happened, shown under the list while actions run. The header
 // keeps the count of what is done, so it is not repeated here.
 func (m *model) logFooter() string {
+	// During a bulk run the panel says the same thing, repository by repository
+	if m.runPanelOn() {
+		return ""
+	}
 	for i := len(m.logLines) - 1; i >= 0; i-- {
 		l := m.logLines[i]
 		if !l.shown() {

@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -111,9 +112,12 @@ type model struct {
 	sorted       bool
 	morning      []string // commands of the morning routine
 
-	// progress of the running actions
-	batchKind  string
-	batchTotal int
+	// progress of the running actions : what they are, how many were asked for, when they started
+	// and how many have failed, all of it reset when a run starts with nothing else running
+	batchKind      string
+	batchTotal     int
+	batchFailed    int
+	batchStartedAt time.Time
 
 	// the credentials screen : what the check found, which platforms are chosen, and which step of
 	// the update is being asked. The secret itself is never kept here, only in credInput while it is
@@ -228,6 +232,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		activity.Record(activity.Info, "", plural(len(msg.paths), "repository", "repositories")+" found under "+m.root)
 		m.batchKind, m.batchTotal = busyRefresh, len(m.rows)
+		m.batchFailed, m.batchStartedAt = 0, time.Now()
 		m.sortRows()
 		m.applyFilter()
 		cmd = tea.Batch(cmds...)
@@ -249,6 +254,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if r, ok := m.byPath[msg.path]; ok {
 			if msg.err != nil {
 				r.note, r.noteOK = msg.kind+" failed: "+msg.err.Error(), false
+				m.batchFailed++
 				// A credential problem is worth offering to fix, instead of only being displayed
 				var authErr *gitops.AuthError
 				if errors.As(msg.err, &authErr) && authErr.Host != "" {
@@ -298,6 +304,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			r.noteOK = failed == 0
+			if !r.noteOK {
+				m.batchFailed++
+			}
 			switch {
 			case !r.noteOK && len(msg.results) == 1:
 				r.note = msg.results[0].Cmd + " failed"
@@ -600,7 +609,7 @@ func (m *model) switchBranch() tea.Cmd {
 		return nil
 	}
 	if m.running() == 0 {
-		m.batchTotal = 0
+		m.batchTotal, m.batchFailed, m.batchStartedAt = 0, 0, time.Now()
 	}
 	m.batchKind = busySwitch
 	m.batchTotal++
@@ -634,8 +643,9 @@ func (m *model) rowsForHosts(hosts []string) []*row {
 
 // startOn launches an action on each of these rows which is not already busy
 func (m *model) startOn(kind string, rows []*row, action func(r *row) tea.Cmd) tea.Cmd {
-	if m.running() == 0 {
-		m.batchTotal = 0
+	fresh := m.running() == 0
+	if fresh {
+		m.batchTotal, m.batchFailed = 0, 0
 	}
 	var cmds []tea.Cmd
 	for _, r := range rows {
@@ -651,6 +661,9 @@ func (m *model) startOn(kind string, rows []*row, action func(r *row) tea.Cmd) t
 	if len(cmds) > 0 {
 		m.batchKind = kind
 		m.batchTotal += len(cmds)
+		if fresh {
+			m.batchStartedAt = time.Now()
+		}
 	}
 	if len(cmds) > 1 {
 		// The line which explains the count in the header : only maxWorkers of them run at once

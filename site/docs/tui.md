@@ -103,7 +103,19 @@ When a fetch or a pull fails because of a credential, the message tells which pl
 
 ## Activity
 
-Fetching or pulling forty repositories takes a while, and only six of them run at a time. To tell what is going on, Heimdall keeps what it did and shows it in two places : the last line is always at the bottom of the screen, and ++shift+l++ opens the whole history, newest at the bottom.
+Fetching or pulling forty repositories takes a while, and only six of them run at a time. To tell what is going on, Heimdall keeps what it did and shows it in three places : the last line is always at the bottom of the screen, a panel takes over while an action runs on several repositories, and ++shift+l++ opens the whole history, newest at the bottom.
+
+### While a run is going on
+
+One line cannot say much about forty repositories, so a panel docks under the list for the length of the run. Its top edge is the progress of the run, read as the band under the header : how many repositories are done, how many hold one of the six workers, and how many wait for one. Under it :
+
+- how far along the run is, how many repositories are running and queued, how many have failed and how long it has been going on,
+- one line per repository being worked on, each with the last thing git said about it, which is where the percentages of a long clone or pull are seen,
+- the failures of this run, marked with a `✖`, so that the one repository which asked for a password is not lost among the thirty-nine which went fine.
+
+The panel takes its lines from the list, never more than half of the pane, and goes away once the run is over. On a short terminal there is no room for it : the count stays in the header and the last line at the bottom of the screen.
+
+### The whole history
 
 | Key | Action |
 |---|---|

@@ -59,6 +59,11 @@ var (
 	noticeStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#10141C")).Background(stateColors[stateBehind])
 	selectColor   = lipgloss.AdaptiveColor{Light: "#2F5FD0", Dark: "#9DB8FF"}
 	cursorColor   = lipgloss.AdaptiveColor{Light: "#DDE3EC", Dark: "#2B3340"}
+	// The meter of the run panel is read as the band under the header : what is done in the color
+	// of a repository needing nothing, what is in flight in the color of a repository worked on,
+	// and what is left in the quiet track the cursor is drawn on
+	flightColor = lipgloss.Color("#9DB8FF")
+	trackColor  = lipgloss.AdaptiveColor{Light: "#DDE3EC", Dark: "#2B3340"}
 )
 
 func behind(gf entity.GitFolder) int {
