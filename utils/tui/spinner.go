@@ -15,6 +15,10 @@ var (
 	SpinnerStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
 )
 
+// Max number of lines of history kept. View reprints them all on every frame, and the per
+// repository lines would otherwise grow for as long as the command runs.
+const maxWarns = 200
+
 type SpinnerModel struct {
 	Spinner spinner.Model
 	tick    int
@@ -53,6 +57,9 @@ func (m SpinnerModel) Update(msg2 tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case InfoMessage:
 		m.Warns = append(m.Warns, msg2.(InfoMessage).Message)
+	}
+	if len(m.Warns) > maxWarns {
+		m.Warns = append([]string(nil), m.Warns[len(m.Warns)-maxWarns:]...)
 	}
 	return m, nil
 }

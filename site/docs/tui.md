@@ -31,6 +31,8 @@ The state of each repository is written in plain words on its right, in a color 
 
 While an action is running on a repository, its state is replaced by what is being done. Then the result of the action is displayed instead, until the next one.
 
+The line at the bottom of the screen always shows the last thing Heimdall did, so that a run on many repositories is never silent : the header keeps the count of how many are done, the bottom line says what just happened. Press ++shift+l++ for the whole history.
+
 !!!info "No network at startup"
     To be displayed quickly, the list is built from local information only, so what it knows about origin dates from the last fetch. When this fetch is more than a day old, the details tell its age : press ++f++ to check origin.
 
@@ -76,6 +78,22 @@ A confirmation is asked before pulling or running commands on several repositori
 | ++p++ | `git pull`, skipped for repositories with local changes |
 | ++m++ | Run the morning routine defined in the [configuration file](config.md) |
 | ++exclam++ | Run a command |
+| ++shift+l++ | Show the activity log |
+
+## Activity
+
+Fetching or pulling forty repositories takes a while, and only six of them run at a time. To tell what is going on, Heimdall keeps what it did and shows it in two places : the last line is always at the bottom of the screen, and ++shift+l++ opens the whole history, newest at the bottom.
+
+| Key | Action |
+|---|---|
+| ++shift+l++ | Show the activity, ++esc++ or ++shift+l++ again to go back |
+| ++up++ / ++down++ or ++j++ / ++k++, ++page-up++ / ++page-down++ | Scroll |
+| ++shift+g++ or ++end++ | Follow the last lines again, after scrolling away |
+
+Each line tells when it happened, which repository it is about and what happened, warnings and errors being marked with a `⚠` and a `✖` so that they are told apart with `--no-color` too. The details of a repository end with a **Recent activity** section listing the last lines about it alone.
+
+!!!info "More detail with `-v`"
+    Reading the local status of a repository happens for all of them at startup and again after every action, so those lines are only shown with the [`--verbose` flag](flags.md). The same lines are always written to the log file, whatever the flags : see [`--log-dir`](flags.md).
 
 ## Branches
 

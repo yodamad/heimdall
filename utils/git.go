@@ -76,6 +76,9 @@ func ListGitDirectories(searchDepth int) []entity.GitFolder {
 	return checkDirAndSubdirs(rootDir, searchDepth, prg)
 }
 
+// How often the walk says where it is : one message per visited entry would flood the program
+const scanTickEvery = 200
+
 func checkDirAndSubdirs(rootDir string, searchDepth int, spinner *tea.Program) []entity.GitFolder {
 	nbIgnoreSlashes := strings.Count(rootDir, "/")
 	if strings.HasPrefix(rootDir, "./") {
@@ -85,10 +88,18 @@ func checkDirAndSubdirs(rootDir string, searchDepth int, spinner *tea.Program) [
 
 	_, err := isGitDir(rootDir)
 	if err != nil {
+		// The walk does not know how many repositories there are before it is over, so the count
+		// grows instead of being an X of N
+		nbVisited := 0
 		filepath.WalkDir(strings.TrimPrefix(rootDir, "./"), func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				// handle possible path err, just in case...
 				return err
+			}
+			// Saying where the walk is on every single entry floods the program and slows it down
+			nbVisited++
+			if nbVisited%scanTickEvery == 0 {
+				spinner.Send(tui.UpdateMessage{Message: fmt.Sprintf("🔍 %d repositories found, scanning %s", len(gitFoldersFound), path)})
 			}
 			if d.IsDir() && (strings.Count(path, string(os.PathSeparator))-nbIgnoreSlashes) >= searchDepth {
 				Trace("Skip "+path, true)
@@ -98,6 +109,8 @@ func checkDirAndSubdirs(rootDir string, searchDepth int, spinner *tea.Program) [
 				gitFolder, err := isGitDir(path)
 				if err == nil && gitFolder.Path != "" {
 					gitFoldersFound = append(gitFoldersFound, gitFolder)
+					spinner.Send(tui.UpdateMessage{Message: fmt.Sprintf("🔍 %d repositories found, scanning %s", len(gitFoldersFound), path)})
+					spinner.Send(tui.InfoMessage{Message: ColorString("[green]✔[default] " + path)})
 					return fs.SkipDir
 				}
 			}
