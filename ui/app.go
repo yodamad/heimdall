@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
+	"github.com/yodamad/heimdall/activity"
 	"github.com/yodamad/heimdall/commons"
 	"github.com/yodamad/heimdall/entity"
 	"github.com/yodamad/heimdall/utils"
@@ -25,6 +26,7 @@ const (
 	modeCommand
 	modeConfirm
 	modeHelp
+	modeLogs
 )
 
 const (
@@ -108,6 +110,14 @@ type model struct {
 	batchKind  string
 	batchTotal int
 
+	// what Heimdall has been doing, drained from the activity store on a tick
+	logLines  []logLine
+	logSeq    uint64
+	logView   viewport.Model
+	logFollow bool
+	// log is the store read : injectable, so that the tests do not depend on the default one
+	log *activity.Log
+
 	filter   textinput.Model
 	cmdInput textinput.Model
 	detail   viewport.Model
@@ -157,11 +167,14 @@ func newModel(root string, depth int) *model {
 		cmdInput:    cmdInput,
 		detail:      viewport.New(0, 0),
 		spin:        spin,
+		logView:     viewport.New(0, 0),
+		logFollow:   true,
+		log:         activity.Default,
 	}
 }
 
 func (m *model) Init() tea.Cmd {
-	return tea.Batch(m.spin.Tick, discoverCmd(m.root, m.depth))
+	return tea.Batch(m.spin.Tick, discoverCmd(m.root, m.depth), activityTickCmd())
 }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -170,6 +183,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		m.spin, cmd = m.spin.Update(msg)
 		return m, cmd
+
+	case activityTickMsg:
+		m.pullActivity()
+		cmd = activityTickCmd()
 
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
@@ -183,8 +200,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			r.base, r.dir = filepath.Base(r.name), parentDir(r.name)
 			m.rows = append(m.rows, r)
 			m.byPath[path] = r
-			cmds = append(cmds, statusCmd(path))
+			cmds = append(cmds, statusCmd(r.name, path))
 		}
+		activity.Record(activity.Info, "", plural(len(msg.paths), "repository", "repositories")+" found under "+m.root)
 		m.batchKind, m.batchTotal = busyRefresh, len(m.rows)
 		m.sortRows()
 		m.applyFilter()
@@ -209,7 +227,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				r.note, r.noteOK = msg.kind+" failed: "+msg.err.Error(), false
 			}
 			r.busy = busyStatus
-			cmd = statusCmd(msg.path)
+			cmd = statusCmd(r.name, msg.path)
 		}
 
 	case cmdMsg:
@@ -233,7 +251,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				r.note = "ran " + strconv.Itoa(len(msg.results)) + " commands"
 			}
 			r.busy = busyStatus
-			cmd = statusCmd(msg.path)
+			cmd = statusCmd(r.name, msg.path)
 		}
 
 	case tea.KeyMsg:
@@ -309,6 +327,9 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 	case modeHelp:
 		m.mode = modeList
 		return nil
+
+	case modeLogs:
+		return m.handleLogsKey(key)
 	}
 
 	if m.detailFocus {
@@ -333,6 +354,9 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 			m.followBranch = true
 		case "enter":
 			return m.switchBranch()
+		case "L":
+			// Before the default, which forwards every other key to the detail pane
+			return m.openLogs()
 		default:
 			var cmd tea.Cmd
 			m.detail, cmd = m.detail.Update(key)
@@ -347,6 +371,9 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 		return tea.Quit
 	case "?":
 		m.mode = modeHelp
+	case "L":
+		// Uppercase : the lowercase l expands the folder
+		return m.openLogs()
 	case "up", "k":
 		m.moveCursor(-1)
 	case "down", "j":
@@ -441,9 +468,9 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 		}
 		m.status = plural(nb, "repository", "repositories") + " can be pulled"
 	case "r":
-		return m.start(busyRefresh, func(r *row) tea.Cmd { return statusCmd(r.gf.Path) })
+		return m.start(busyRefresh, func(r *row) tea.Cmd { return statusCmd(r.name, r.gf.Path) })
 	case "f":
-		return m.start(busyFetch, func(r *row) tea.Cmd { return fetchCmd(r.gf.Path) })
+		return m.start(busyFetch, func(r *row) tea.Cmd { return fetchCmd(r.name, r.gf.Path) })
 	case "p":
 		return m.confirm("Pull", func() tea.Cmd {
 			return m.start(busyPull, func(r *row) tea.Cmd {
@@ -454,7 +481,7 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 					r.note, r.noteOK = "pull skipped, local changes", false
 					return nil
 				}
-				return pullCmd(r.gf.Path)
+				return pullCmd(r.name, r.gf.Path)
 			})
 		})
 	case "m":
@@ -510,7 +537,7 @@ func (m *model) switchBranch() tea.Cmd {
 	m.batchKind = busySwitch
 	m.batchTotal++
 	r.note, r.busy = "", busySwitch
-	cmd := switchCmd(r.gf.Path, branches[m.branchCursor].Name)
+	cmd := switchCmd(r.name, r.gf.Path, branches[m.branchCursor].Name)
 	// The branch the repository is on comes first
 	m.branchCursor, m.followBranch = 0, true
 	return cmd
@@ -536,6 +563,10 @@ func (m *model) start(kind string, action func(r *row) tea.Cmd) tea.Cmd {
 		m.batchKind = kind
 		m.batchTotal += len(cmds)
 	}
+	if len(cmds) > 1 {
+		// The line which explains the count in the header : only maxWorkers of them run at once
+		activity.Record(activity.Info, "", busyVerbs[kind]+" queued on "+plural(len(cmds), "repository", "repositories"))
+	}
 	return tea.Batch(cmds...)
 }
 
@@ -555,7 +586,7 @@ func (m *model) confirm(label string, run func() tea.Cmd) tea.Cmd {
 
 func (m *model) runCommands(cmds []string) tea.Cmd {
 	return m.confirm("Run '"+strings.Join(cmds, "', '")+"'", func() tea.Cmd {
-		return m.start(busyCmd, func(r *row) tea.Cmd { return execCmd(r.gf, cmds) })
+		return m.start(busyCmd, func(r *row) tea.Cmd { return execCmd(r.name, r.gf, cmds) })
 	})
 }
 
@@ -810,6 +841,10 @@ func (m *model) layout() {
 	m.detail.Width = m.detailW
 	// title
 	m.detail.Height = m.paneH - 1
+	// the pane takes the whole width, less the margin, and leaves a line for its title
+	m.logView.Width = m.width - 2
+	m.logView.Height = m.paneH - 1
+	m.syncLogView()
 	m.filter.Width = m.width - 10
 	m.cmdInput.Width = m.width - 10
 	m.detailPath = ""
