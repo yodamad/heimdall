@@ -47,13 +47,18 @@ var stateNames = map[state]string{
 }
 
 var (
-	dimStyle    = lipgloss.NewStyle().Foreground(dimColor)
-	okStyle     = lipgloss.NewStyle().Foreground(stateColors[stateAhead])
-	koStyle     = lipgloss.NewStyle().Foreground(stateColors[stateBroken])
-	warnStyle   = lipgloss.NewStyle().Foreground(stateColors[stateBehind])
-	boldStyle   = lipgloss.NewStyle().Bold(true)
-	selectColor = lipgloss.AdaptiveColor{Light: "#2F5FD0", Dark: "#9DB8FF"}
-	cursorColor = lipgloss.AdaptiveColor{Light: "#DDE3EC", Dark: "#2B3340"}
+	dimStyle  = lipgloss.NewStyle().Foreground(dimColor)
+	okStyle   = lipgloss.NewStyle().Foreground(stateColors[stateAhead])
+	koStyle   = lipgloss.NewStyle().Foreground(stateColors[stateBroken])
+	warnStyle = lipgloss.NewStyle().Foreground(stateColors[stateBehind])
+	boldStyle = lipgloss.NewStyle().Bold(true)
+	// What is happening right now must be read at a glance: a badge in the header,
+	// a bright line for a row being worked on, and a filled bar for a notice
+	activityStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#10141C")).Background(stateColors[stateBehind])
+	busyStyle     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#9DB8FF"))
+	noticeStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#10141C")).Background(stateColors[stateBehind])
+	selectColor   = lipgloss.AdaptiveColor{Light: "#2F5FD0", Dark: "#9DB8FF"}
+	cursorColor   = lipgloss.AdaptiveColor{Light: "#DDE3EC", Dark: "#2B3340"}
 )
 
 func behind(gf entity.GitFolder) int {

@@ -134,8 +134,14 @@ func (m *model) headerLine() string {
 	if home, err := os.UserHomeDir(); err == nil && strings.HasPrefix(right, home) {
 		right = "~" + strings.TrimPrefix(right, home)
 	}
+	// What runs now is the most useful thing on this line: it gets a badge of its own
+	rightStyle := dimStyle
 	if running := m.running(); running > 0 && m.batchTotal > 0 {
-		right = busyVerbs[m.batchKind] + " " + strconv.Itoa(m.batchTotal-running) + " of " + strconv.Itoa(m.batchTotal)
+		right = " ⟳ " + busyVerbs[m.batchKind] + " " + strconv.Itoa(m.batchTotal-running) + " of " + strconv.Itoa(m.batchTotal) + " "
+		rightStyle = activityStyle
+		if commons.NoColor {
+			rightStyle = lipgloss.NewStyle().Bold(true).Reverse(true)
+		}
 	}
 
 	// The count of repositories in each state, in the color of the state
@@ -174,7 +180,7 @@ func (m *model) headerLine() string {
 		line += c.style.Render(c.text) + "  "
 	}
 	if gap := m.width - width() - lipgloss.Width(right) - 1; right != "" && gap >= 0 {
-		line += strings.Repeat(" ", gap) + dimStyle.Render(right)
+		line += strings.Repeat(" ", gap) + rightStyle.Render(right)
 	}
 	return line
 }
@@ -228,7 +234,11 @@ func (m *model) statusLine() string {
 		return m.credsPrompt()
 	}
 	if m.status != "" {
-		return warnStyle.Render(fit(" "+m.status, m.width))
+		// A notice is easy to miss between two full panes: it fills its line
+		if commons.NoColor {
+			return lipgloss.NewStyle().Bold(true).Reverse(true).Render(fit(" "+m.status, m.width))
+		}
+		return noticeStyle.Render(fit(" "+m.status, m.width))
 	}
 	if m.filter.Value() != "" {
 		return dimStyle.Render(fit(" Filtered on \""+m.filter.Value()+"\", esc to list all", m.width))
@@ -517,7 +527,8 @@ func (m *model) rowLine(r *row, depth int, isCursor bool) string {
 	}
 	switch {
 	case r.busy != "":
-		text, textStyle = busyVerbs[r.busy]+"…", dimStyle
+		// A repository being worked on is not secondary information
+		text, textStyle = "⟳ "+busyVerbs[r.busy]+"…", busyStyle
 	case r.note != "" && r.noteOK:
 		text, textStyle = r.note, okStyle
 	case r.note != "":
