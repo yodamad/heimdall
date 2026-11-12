@@ -1,0 +1,15 @@
+:root {
+    --custom-h1: purple;
+    --custom-h2: #a144a1;
+}
+
+.md-content {
+    h1 {
+        font-weight: bolder;
+        color: var(--custom-h1);
+    }
+
+    h2 {
+        color: var(--custom-h2);
+    }
+}
