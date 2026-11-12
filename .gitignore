@@ -4,3 +4,4 @@
 dist/
 demo.tape
 heimdall
+.claude/worktrees/
