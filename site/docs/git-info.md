@@ -7,6 +7,8 @@ Some options are available and described in this page. But there are also [globa
 
 ![Simple demo](./assets/heimdall-git-info-demo.gif)
 
+While the directories are being searched, the line being refreshed tells how many repositories were found so far and where the search is, `🔍 7 repositories found, scanning ~/work/group`. The count grows instead of being an `x of y` : how many there are is only known once the search is over. Each repository found is kept on a line of its own, so that the search is never a silent wait.
+
 ## Available options
 
 ![Options](./assets/heimdall-git-info-help.gif)

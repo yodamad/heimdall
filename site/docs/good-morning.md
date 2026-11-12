@@ -6,6 +6,8 @@ Some options are available and described in this page. But there are also [globa
 
 ![Simple demo](./assets/heimdall-good-morning-demo.gif)
 
+The repositories are gone through one after the other, and the line being refreshed tells how far along the routine is, `☀️ [3/12] Good Morning my-repo`. Above it, one line is kept per repository already done, `✔` when every command worked and `✖` with the name of the first one which did not. The routine ends with `☕️ All done ! 12 repositories, 2 with a failing command`, before the table of the results.
+
 ## Available options
 
 ![Options](./assets/heimdall-good-morning-help.gif)

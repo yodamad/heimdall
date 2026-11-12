@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -125,19 +126,40 @@ func WakeUp() {
 	}()
 
 	updatedFolders := make([]entity.GitFolderWithCmdInfos, 0)
-	for _, gf := range gitFoldersFound {
+	nbFailed := 0
+	for i, gf := range gitFoldersFound {
+		repo := utils.VisualDisplayRepo(gf.Path)
+		// The count says how far along the routine is : the folders are gone through one by one
+		prg.Send(tui.UpdateMessage{Message: fmt.Sprintf("☀️ [%d/%d] Good Morning %s", i+1, len(gitFoldersFound), repo)})
 
-		prg.Send(tui.UpdateMessage{Message: "☀️ Good Morning " + utils.VisualDisplayRepo(gf.Path)})
 		// Execute commands
 		updatedFolder := entity.GitFolderWithCmdInfos{
 			GitFolder: gf,
 		}
+		failed := ""
 		for _, cmd := range morningCmds {
-			updatedFolder.Cmds = append(updatedFolder.Cmds, utils.ExecCmd(cmd, gf))
+			info := utils.ExecCmd(cmd, gf)
+			if info.ExitCode != 0 && failed == "" {
+				failed = cmd
+			}
+			updatedFolder.Cmds = append(updatedFolder.Cmds, info)
 		}
 		updatedFolders = append(updatedFolders, updatedFolder)
+
+		// One line kept per repository, so that the user can read what already happened
+		if failed == "" {
+			prg.Send(tui.InfoMessage{Message: utils.ColorString("[green]✔[default] " + repo)})
+		} else {
+			nbFailed++
+			prg.Send(tui.InfoMessage{Message: utils.ColorString("[red]✖[default] " + repo + " : " + failed + " failed")})
+		}
 	}
-	prg.Send(tui.UpdateMessage{Message: "☕️ All done !"})
+
+	done := fmt.Sprintf("☕️ All done ! %d repositories", len(gitFoldersFound))
+	if nbFailed > 0 {
+		done += fmt.Sprintf(", %d with a failing command", nbFailed)
+	}
+	prg.Send(tui.UpdateMessage{Message: done})
 	err := prg.ReleaseTerminal()
 	if err != nil {
 		utils.TraceWarn("Failed release terminal " + err.Error())

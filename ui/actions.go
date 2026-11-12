@@ -4,6 +4,7 @@ import (
 	"context"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/yodamad/heimdall/activity"
 	"github.com/yodamad/heimdall/commons"
 	"github.com/yodamad/heimdall/creds"
 	"github.com/yodamad/heimdall/entity"
@@ -19,6 +20,43 @@ const maxWorkers = 6
 const nbRecentCommits = 5
 
 var workers = make(chan struct{}, maxWorkers)
+
+// doneVerbs says what happened, once it has happened : busyVerbs (ui/view.go) is the running form
+var doneVerbs = map[string]string{
+	busyStatus:  "read",
+	busyRefresh: "read",
+	busyFetch:   "fetched",
+	busyPull:    "pulled",
+	busySwitch:  "switched",
+	busyCmd:     "ran",
+}
+
+// logStart records that a repository is being worked on. It is called once the worker slot is
+// held, so the log says what is actually running and not the whole queue at once.
+//
+// Reading a status is recorded as a debug line : it happens for every repository at startup and
+// again after every action, and would bury the lines the user is waiting for.
+func logStart(kind, name string) {
+	level := activity.Info
+	if kind == busyStatus || kind == busyRefresh {
+		level = activity.Debug
+	}
+	activity.Record(level, name, busyVerbs[kind]+"…")
+}
+
+// logEnd records how it went. The text of the error is recorded, as it already is in the log file :
+// nothing here is a secret, the credentials never leave their closure.
+func logEnd(kind, name string, err error) {
+	if err != nil {
+		activity.Record(activity.Warn, name, doneVerbs[kind]+" failed : "+err.Error())
+		return
+	}
+	level := activity.Info
+	if kind == busyStatus || kind == busyRefresh {
+		level = activity.Debug
+	}
+	activity.Record(level, name, doneVerbs[kind])
+}
 
 type discoveredMsg struct {
 	paths []string
@@ -50,13 +88,15 @@ func discoverCmd(root string, depth int) tea.Cmd {
 	}
 }
 
-func statusCmd(path string) tea.Cmd {
+func statusCmd(name, path string) tea.Cmd {
 	return func() tea.Msg {
 		workers <- struct{}{}
 		defer func() { <-workers }()
+		logStart(busyStatus, name)
 
 		msg := statusMsg{gf: gitops.LocalStatus(path)}
 		if msg.gf.Err != "" {
+			activity.Record(activity.Warn, name, "can't be read : "+msg.gf.Err)
 			return msg
 		}
 		msg.recent = gitops.RecentCommits(path, nbRecentCommits)
@@ -68,31 +108,41 @@ func statusCmd(path string) tea.Cmd {
 		if msg.gf.Ahead > 0 {
 			msg.outgoing = gitops.OutgoingCommits(path, msg.gf.CurrentBranch)
 		}
+		logEnd(busyStatus, name, nil)
 		return msg
 	}
 }
 
-func fetchCmd(path string) tea.Cmd {
+func fetchCmd(name, path string) tea.Cmd {
 	return func() tea.Msg {
 		workers <- struct{}{}
 		defer func() { <-workers }()
-		return opMsg{path: path, kind: busyFetch, err: gitops.Fetch(path)}
+		logStart(busyFetch, name)
+		err := gitops.Fetch(path)
+		logEnd(busyFetch, name, err)
+		return opMsg{path: path, kind: busyFetch, err: err}
 	}
 }
 
-func pullCmd(path string) tea.Cmd {
+func pullCmd(name, path string) tea.Cmd {
 	return func() tea.Msg {
 		workers <- struct{}{}
 		defer func() { <-workers }()
-		return opMsg{path: path, kind: busyPull, err: gitops.Pull(path)}
+		logStart(busyPull, name)
+		err := gitops.Pull(path)
+		logEnd(busyPull, name, err)
+		return opMsg{path: path, kind: busyPull, err: err}
 	}
 }
 
-func switchCmd(path string, branch string) tea.Cmd {
+func switchCmd(name, path string, branch string) tea.Cmd {
 	return func() tea.Msg {
 		workers <- struct{}{}
 		defer func() { <-workers }()
-		return opMsg{path: path, kind: busySwitch, err: gitops.Switch(path, branch)}
+		activity.Record(activity.Info, name, "switching to "+branch+"…")
+		err := gitops.Switch(path, branch)
+		logEnd(busySwitch, name, err)
+		return opMsg{path: path, kind: busySwitch, err: err}
 	}
 }
 
@@ -126,14 +176,24 @@ func credSaveCmd(entry, value string, hosts []string) tea.Cmd {
 	}
 }
 
-func execCmd(gf entity.GitFolder, cmds []string) tea.Cmd {
+func execCmd(name string, gf entity.GitFolder, cmds []string) tea.Cmd {
 	return func() tea.Msg {
 		workers <- struct{}{}
 		defer func() { <-workers }()
+		logStart(busyCmd, name)
 
 		msg := cmdMsg{path: gf.Path}
+		failed := 0
 		for _, cmd := range cmds {
-			msg.results = append(msg.results, utils.ExecCmd(cmd, gf))
+			result := utils.ExecCmd(cmd, gf)
+			if result.ExitCode != 0 {
+				failed++
+				activity.Record(activity.Warn, name, cmd+" failed")
+			}
+			msg.results = append(msg.results, result)
+		}
+		if failed == 0 {
+			activity.Record(activity.Info, name, doneVerbs[busyCmd]+" "+plural(len(cmds), "command", "commands"))
 		}
 		return msg
 	}

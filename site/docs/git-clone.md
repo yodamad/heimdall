@@ -20,6 +20,20 @@ For example, running `heimdall git-clone -g https://github.com/yodamad-actions` 
 
 ![Clone group](./assets/heimdall-git-clone-group.gif)
 
+The repositories are cloned one after the other, and each line is numbered so that a group of forty is not a silent wait :
+
+```
+📦 37 repositories to clone
+🧬 [1/37] Cloning https://github.com/yodamad-actions/first...
+✅ [1/37] https://github.com/yodamad-actions/first cloned
+...
+🏁 36 cloned, 1 failed
+```
+
+The summary at the end counts what really was cloned : a repository which could not be is counted as failed, and said so on its own line.
+
+With [`--verbose`](flags.md), the progress of git itself (counting and compressing objects) is displayed too. Cloning a single repository prints what it always printed, without any numbering.
+
 ### Include hostname: `--include-hostname` or `i`
 
 Enabling this option will keep in the path created the hostname of the URL to be cloned, removing the suffix from it.

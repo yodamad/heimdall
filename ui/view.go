@@ -13,6 +13,9 @@ import (
 // Max number of output lines kept per command in the detail pane
 const maxOutputLines = 200
 
+// Max number of activity lines shown for one repository in the detail pane
+const nbRowActivity = 8
+
 const (
 	branchW  = 14
 	stateW   = 28
@@ -46,6 +49,10 @@ Act on the selected repositories, or if none on the current one or folder
   p            pull, skipped when there are local changes
   m            run the morning routine
   !            run a command
+
+Activity
+  L                show what Heimdall is doing, esc to go back
+  ↑/↓ pgup/pgdown  scroll the activity, G to follow the last lines again
 
 In the details
   ↑/↓ j/k      choose a branch of the repository, pgup/pgdown to scroll
@@ -88,6 +95,8 @@ func (m *model) View() string {
 		}
 	case m.mode == modeCreds:
 		body = m.credsLines()
+	case m.mode == modeLogs:
+		body = m.logPane()
 	case m.narrow() && m.detailFocus:
 		for _, line := range m.detailLines() {
 			body = append(body, " "+line)
@@ -224,7 +233,9 @@ func (m *model) statusLine() string {
 	if m.filter.Value() != "" {
 		return dimStyle.Render(fit(" Filtered on \""+m.filter.Value()+"\", esc to list all", m.width))
 	}
-	return ""
+	// Else the slot shows the last thing which happened. The header keeps the X of N count, so
+	// the two never say the same thing.
+	return m.logFooter()
 }
 
 // keysLine lists the keys which do something right now, and on how many repositories
@@ -241,6 +252,8 @@ func (m *model) keysLine() string {
 		keys = []string{"any key go back"}
 	case m.mode == modeCreds:
 		keys = m.credsKeys()
+	case m.mode == modeLogs:
+		keys = []string{"↑↓ scroll", "G follow", "esc back", "q quit"}
 	case m.detailFocus && len(m.branchChoices()) > 0:
 		keys = []string{"↑↓ choose a branch"}
 		if branch := m.branchChoices()[m.branchCursor]; !branch.Current {
@@ -290,7 +303,7 @@ func (m *model) keysLine() string {
 			}
 			keys = append(keys, "! run a command", "space select", "tab details")
 		}
-		keys = append(keys, "/ filter", "c credentials", "? all keys")
+		keys = append(keys, "/ filter", "c credentials", "L logs", "? all keys")
 	}
 	return dimStyle.Render(fit(" "+strings.Join(keys, "   "), m.width))
 }
@@ -689,6 +702,14 @@ func (m *model) detailContent(r *row) string {
 	}
 
 	commits("Last commits", 0, dimColor, r.recent)
+
+	// Last, what Heimdall itself did to this repository, press L for the whole history
+	if lines := m.rowActivity(r, nbRowActivity); len(lines) > 0 {
+		section("Recent activity", 0)
+		for _, line := range lines {
+			b.WriteString(line + "\n")
+		}
+	}
 	return b.String()
 }
 

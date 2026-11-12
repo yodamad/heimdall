@@ -8,10 +8,19 @@ import (
 
 	"github.com/mitchellh/colorstring"
 	log "github.com/sirupsen/logrus"
+	"github.com/yodamad/heimdall/activity"
 	"github.com/yodamad/heimdall/commons"
 )
 
 func Trace(msg string, isDebug bool) {
+	// Recorded before anything is printed : the activity log is memory only, so this holds the
+	// promise that nothing reaches stdout while the TUI owns the screen
+	level := activity.Info
+	if isDebug {
+		level = activity.Debug
+	}
+	activity.Record(level, "", CleanForLog(msg))
+
 	if commons.TUIMode {
 		if isDebug {
 			log.Debug(CleanForLog(msg))
@@ -32,6 +41,8 @@ func Trace(msg string, isDebug bool) {
 }
 
 func TraceWarn(msg string) {
+	activity.Record(activity.Warn, "", CleanForLog(msg))
+
 	if commons.TUIMode {
 		log.Warn(CleanForLog(msg))
 		return

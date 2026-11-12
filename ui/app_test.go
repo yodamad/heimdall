@@ -41,6 +41,9 @@ func drain(m *model, cmd tea.Cmd) {
 			drain(m, c)
 		}
 	case spinner.TickMsg:
+	// Ignored, as the spinner tick is : the activity tick asks for itself again, so following it
+	// would never end. The tests call m.pullActivity() to exercise that path.
+	case activityTickMsg:
 	default:
 		_, next := m.Update(msg)
 		drain(m, next)

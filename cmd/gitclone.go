@@ -12,9 +12,11 @@ import (
 	"github.com/yodamad/heimdall/creds"
 	"github.com/yodamad/heimdall/utils"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
+	"io"
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -80,7 +82,7 @@ func clone(urlArg string) {
 			utils.TraceWarn("Platform type not supported yet (only gitlab & github for now)")
 		}
 	} else {
-		cloneRepo(urlArg)
+		cloneRepo(urlArg, 1, 1)
 	}
 }
 
@@ -108,10 +110,11 @@ func cloneGitlabGroup(groupUrl string) {
 		utils.TraceWarn(utils.ColorString("Cannot retrieve projects from group : [red]" + err.Error()))
 	}
 
+	urls := make([]string, 0, len(projects))
 	for _, project := range projects {
-		projectUrl := project.WebURL
-		cloneRepo(projectUrl)
+		urls = append(urls, project.WebURL)
 	}
+	cloneGroup(urls)
 }
 
 func cloneGithubGroup(orgUrl string) {
@@ -132,32 +135,71 @@ func cloneGithubGroup(orgUrl string) {
 	if err != nil {
 		utils.TraceWarn(utils.ColorString("Cannot retrieve projects from group : [red]" + err.Error()))
 	}
+	urls := make([]string, 0, len(repos))
 	for _, project := range repos {
-		projectUrl := project.GetCloneURL()
-		cloneRepo(strings.TrimSuffix(projectUrl, ".git"))
+		urls = append(urls, strings.TrimSuffix(project.GetCloneURL(), ".git"))
 	}
+	cloneGroup(urls)
 }
 
-func cloneRepo(inputUrl string) {
-	utils.Trace(utils.ColorString("[light_blue]🧬 Cloning [cyan]"+inputUrl+"..."), false)
+// cloneGroup clones the repositories of a group one after the other, saying how far along it is.
+//
+// It stays sequential on purpose : asking for a token may prompt, and several clones prompting at
+// once would fight over the terminal. What was missing is the count, not the speed.
+func cloneGroup(urls []string) {
+	utils.Trace(utils.ColorString("[light_blue]📦 "+strconv.Itoa(len(urls))+" repositories to clone"), false)
+
+	failed := 0
+	for i, projectUrl := range urls {
+		if err := cloneRepo(projectUrl, i+1, len(urls)); err != nil {
+			failed++
+		}
+	}
+
+	done := len(urls) - failed
+	summary := "[light_blue]🏁 " + strconv.Itoa(done) + " cloned"
+	if failed > 0 {
+		summary += "[light_blue], [red]" + strconv.Itoa(failed) + " failed"
+	}
+	utils.Trace(utils.ColorString(summary), false)
+}
+
+// progressPrefix numbers a repository in a group clone. It is empty when there is only one, so
+// that cloning a single repository prints exactly what it printed before.
+func progressPrefix(index, total int) string {
+	if total < 2 {
+		return ""
+	}
+	return "[" + strconv.Itoa(index) + "/" + strconv.Itoa(total) + "] "
+}
+
+func cloneRepo(inputUrl string, index, total int) error {
+	prefix := progressPrefix(index, total)
+	utils.Trace(utils.ColorString("[light_blue]🧬 "+prefix+"Cloning [cyan]"+inputUrl+"..."), false)
 
 	parsedUrl, _ := url.Parse(inputUrl)
 	hostnameOfRepo := parsedUrl.Hostname()
 	pathToRepo := parsedUrl.Path
 
+	var err error
 	if hostname {
 		if !keepSuffix {
 			re := regexp.MustCompile(`\.[a-zA-Z]+$`)
 			hostnameOfRepo = re.ReplaceAllString(hostnameOfRepo, "")
 		}
-		doClone(inputUrl, commons.WorkDir+hostnameOfRepo+pathToRepo)
+		err = doClone(inputUrl, commons.WorkDir+hostnameOfRepo+pathToRepo)
 	} else {
-		doClone(inputUrl, commons.WorkDir+pathToRepo)
+		err = doClone(inputUrl, commons.WorkDir+pathToRepo)
 	}
-	utils.Trace(utils.ColorString("[light_blue]✅ [cyan]"+inputUrl+"[light_blue] cloned"), false)
+	if err != nil {
+		// doClone has already said what went wrong
+		return err
+	}
+	utils.Trace(utils.ColorString("[light_blue]✅ "+prefix+"[cyan]"+inputUrl+"[light_blue] cloned"), false)
+	return nil
 }
 
-func doClone(inputUrl string, path string) {
+func doClone(inputUrl string, path string) error {
 	parsedUrl, _ := url.Parse(inputUrl)
 	hostnameOfRepo := parsedUrl.Hostname()
 	path = strings.ReplaceAll(path, "//", "/")
@@ -165,13 +207,26 @@ func doClone(inputUrl string, path string) {
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
 		utils.TraceWarn(utils.ColorString("❌ Cannot create path : [red] " + err.Error()))
+		return err
 	}
+
+	// The progress of git is a sideband redrawing itself with carriage returns : it is only asked
+	// for when the user asked to be told everything, and goes through a writer cutting it in lines
+	var progress io.Writer
+	if commons.Verbose {
+		lines := utils.NewLineWriter(func(line string) { utils.Trace(line, true) })
+		defer lines.Close()
+		progress = lines
+	}
+
 	_, err = git.PlainClone(path, false, &git.CloneOptions{
 		Auth:     &http.BasicAuth{Password: utils.GetToken(hostnameOfRepo, nil)},
 		URL:      inputUrl + ".git",
-		Progress: nil,
+		Progress: progress,
 	})
 	if err != nil {
 		utils.TraceWarn(utils.ColorString("❌ Git clone failed: [red] " + err.Error()))
+		return err
 	}
+	return nil
 }
