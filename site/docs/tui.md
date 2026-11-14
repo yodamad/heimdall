@@ -76,6 +76,7 @@ A confirmation is asked before pulling or running commands on several repositori
 | ++r++ | Refresh local status |
 | ++f++ | `git fetch` |
 | ++p++ | `git pull`, skipped for repositories with local changes |
+| ++w++ | Remove the [unused worktrees](#worktrees) |
 | ++m++ | Run the morning routine defined in the [configuration file](config.md) |
 | ++exclam++ | Run a command |
 | ++c++ | Open the [credentials](#credentials) screen |
@@ -142,6 +143,24 @@ Press ++tab++ to go to the details, then :
 | ++tab++ or ++esc++ | Go back to the list |
 
 When git refuses to switch, because of local changes for instance, the details tell why.
+
+## Worktrees
+
+A repository can have several working trees, one folder per branch, added with `git worktree add`. They pile up easily : a branch is finished, pushed and deleted, and its folder stays. The details of a repository say how many it has besides the folder Heimdall lists it by, and a **Worktrees** section tells, for each one, which branch it is on, where its folder is and what it holds :
+
+| What the line says | What it means |
+|---|---|
+| `nothing kept here` | Clean, and every commit it holds is kept on another branch, a tag or a remote |
+| `2 changed` | Uncommitted changes |
+| `3 commits of its own` | Commits no other branch, tag nor remote holds : they would be lost |
+| `folder gone` | Its folder was deleted by hand, only git's bookkeeping is left |
+| `locked` | Someone locked it with `git worktree lock` |
+| `main worktree` | The main working tree, which git cannot remove. Only listed when Heimdall lists the repository by one of its linked worktrees |
+
+The ones nothing would be lost from are marked with a `-` and counted above, and ++w++ removes them : the clean ones with `git worktree remove`, and the ones whose folder is gone with `git worktree prune`. Everything else is left alone, whatever is selected.
+
+!!!warning "A worktree is a folder on disk"
+    ++w++ always asks for a confirmation, even for a single worktree, and the count it asks about is what the last status read knew. Press ++r++ first if something may have changed since. What was removed is named in the [activity log](#activity), and when git refuses one all the same, what it said is shown on the repository.
 
 ## Available options
 

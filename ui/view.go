@@ -2,6 +2,7 @@ package ui
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -47,6 +48,8 @@ Act on the selected repositories, or if none on the current one or folder
   r            read local status again
   f            fetch
   p            pull, skipped when there are local changes
+  w            remove the unused worktrees, the ones holding changes, commits of
+               their own or a lock are kept
   m            run the morning routine
   !            run a command
 
@@ -80,6 +83,7 @@ var busyVerbs = map[string]string{
 	busyPull:    "pulling",
 	busySwitch:  "switching",
 	busyCmd:     "running",
+	busyClean:   "removing worktrees",
 }
 
 func (m *model) View() string {
@@ -322,6 +326,9 @@ func (m *model) keysLine() string {
 				keys = append(keys, "p pull "+strconv.Itoa(nbPullable)+" of "+strconv.Itoa(len(targets)))
 			default:
 				keys = append(keys, "p pull"+on)
+			}
+			if nb := unusedWorktrees(targets); nb > 0 {
+				keys = append(keys, "w remove "+plural(nb, "unused worktree", "unused worktrees"))
 			}
 			if len(m.morning) > 0 {
 				keys = append(keys, "m morning routine")
@@ -667,6 +674,14 @@ func (m *model) detailContent(r *row) string {
 	if r.stashes > 0 {
 		text += " " + plural(r.stashes, "stash", "stashes") + " kept aside."
 	}
+	// The worktrees are listed below, this says at a glance how many there are and whether
+	// the w key has anything to remove
+	if nb := len(r.worktrees); nb > 0 {
+		text += " " + plural(nb, "other worktree", "other worktrees") + "."
+		if unused := len(entity.UnusedWorktrees(r.worktrees)); unused > 0 {
+			text += " " + warnStyle.Render(strconv.Itoa(unused)+" unused, press w to remove.")
+		}
+	}
 	if r.note != "" && !r.noteOK {
 		text += "\n" + koStyle.Render(strings.ToUpper(r.note[:1])+r.note[1:])
 	}
@@ -727,6 +742,15 @@ func (m *model) detailContent(r *row) string {
 		}
 	}
 
+	// The other working trees of the same repository, the ones the w key would remove told
+	// apart from the ones holding something
+	if len(r.worktrees) > 0 {
+		section("Worktrees", len(r.worktrees))
+		for _, wt := range r.worktrees {
+			b.WriteString(m.worktreeLine(r, wt) + "\n")
+		}
+	}
+
 	commits("Last commits", 0, dimColor, r.recent)
 
 	// Last, what Heimdall itself did to this repository, press L for the whole history
@@ -783,6 +807,65 @@ func (m *model) branchLine(branch entity.Branch, isCursor bool) string {
 }
 
 // shortRemote keeps the host and the path of a remote URL
+// worktreeLine tells where a worktree is, on which branch, and what it holds. What the w key
+// would remove is marked, so that it is clear before the question is asked.
+func (m *model) worktreeLine(r *row, wt entity.Worktree) string {
+	text, color := "nothing kept here", stateColors[stateClean]
+	var parts []string
+	if wt.Changes > 0 {
+		parts = append(parts, strconv.Itoa(wt.Changes)+" changed")
+	}
+	if wt.Unmerged > 0 {
+		parts = append(parts, plural(wt.Unmerged, "commit", "commits")+" of its own")
+	}
+	switch {
+	case wt.Main:
+		text, color = "main worktree", dimColor
+	case wt.Missing:
+		text, color = "folder gone", stateColors[stateBehind]
+	case wt.Locked:
+		text, color = "locked", dimColor
+	case len(parts) > 0:
+		text, color = strings.Join(parts, ", "), stateColors[stateDirty]
+	}
+
+	// What can be removed is marked as the current branch is, and the age gives way first
+	mark := "  "
+	if wt.Unused() {
+		mark = "- "
+	}
+	name, where := wt.Branch, worktreePath(r, wt)
+	if name == "" {
+		// A detached worktree is on no branch, its head says where it stands
+		name = wt.Head
+	}
+	nameW, age := m.detail.Width-2-2-branchStateW, ""
+	if nameW-branchAgeW-2 >= 12 {
+		nameW -= branchAgeW + 2
+		age = dimStyle.Render("  " + fit(wt.Age, branchAgeW))
+	}
+	// The branch keeps its column, the path takes what is left of the name and gives way first
+	line := mark
+	if pathW := nameW - branchW - 2; pathW >= 8 {
+		line += fit(name, branchW) + "  " + dimStyle.Render(fitLeft(where, pathW))
+	} else {
+		line += fit(name, nameW)
+	}
+	return line + "  " + lipgloss.NewStyle().Foreground(color).Render(fit(text, branchStateW)) + age
+}
+
+// worktreePath is where a worktree is: under the repository the path is the one relative to
+// it, elsewhere the home folder is shortened to ~
+func worktreePath(r *row, wt entity.Worktree) string {
+	if rel, err := filepath.Rel(r.gf.Path, wt.Path); err == nil && !strings.HasPrefix(rel, "..") {
+		return rel
+	}
+	if home, err := os.UserHomeDir(); err == nil && strings.HasPrefix(wt.Path, home) {
+		return "~" + strings.TrimPrefix(wt.Path, home)
+	}
+	return wt.Path
+}
+
 func shortRemote(remoteURL string) string {
 	remote := strings.TrimSuffix(remoteURL, ".git")
 	if i := strings.Index(remote, "://"); i >= 0 {

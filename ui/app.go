@@ -42,6 +42,7 @@ const (
 	busyPull    = "pull"
 	busySwitch  = "switch"
 	busyCmd     = "cmd"
+	busyClean   = "clean" // removing the unused worktrees
 )
 
 type row struct {
@@ -59,7 +60,9 @@ type row struct {
 	recent   []string // last commits of the current branch
 	branches []entity.Branch
 	stashes  int
-	cmds     []entity.CmdInfo
+	// the worktrees of the repository other than this folder, and how many can be removed
+	worktrees []entity.Worktree
+	cmds      []entity.CmdInfo
 }
 
 const sep = string(filepath.Separator)
@@ -245,6 +248,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			r.recent = msg.recent
 			r.branches = msg.branches
 			r.stashes = msg.stashes
+			r.worktrees = msg.worktrees
 			r.loaded = true
 			r.busy = ""
 		}
@@ -261,6 +265,22 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.credOffer = authErr.Host
 					m.status = "Press c to update the " + authErr.Kind + " for " + authErr.Host
 				}
+			}
+			r.busy = busyStatus
+			cmd = statusCmd(r.name, msg.path)
+		}
+
+	case cleanedMsg:
+		if r, ok := m.byPath[msg.path]; ok {
+			nb := len(msg.cleanup.Removed)
+			switch {
+			case msg.cleanup.Err != nil:
+				r.note, r.noteOK = "worktree removal failed: "+msg.cleanup.Err.Error(), false
+				m.batchFailed++
+			case nb == 0:
+				r.note, r.noteOK = "no worktree to remove", true
+			default:
+				r.note, r.noteOK = "removed "+plural(nb, "worktree", "worktrees"), true
 			}
 			r.busy = busyStatus
 			cmd = statusCmd(r.name, msg.path)
@@ -561,6 +581,8 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 				return pullCmd(r.name, r.gf.Path)
 			})
 		})
+	case "w":
+		return m.cleanWorktrees()
 	case "m":
 		if len(m.morning) == 0 {
 			m.status = "No morning routine yet. Set morning_routine.commands in the config file, or press ! to run a command"
@@ -591,6 +613,44 @@ func (m *model) targets() []*row {
 		targets = m.folderRows(m.currentFolder())
 	}
 	return targets
+}
+
+// unusedWorktrees counts the worktrees which can be removed in these repositories
+func unusedWorktrees(rows []*row) int {
+	nb := 0
+	for _, r := range rows {
+		nb += len(entity.UnusedWorktrees(r.worktrees))
+	}
+	return nb
+}
+
+// cleanWorktrees removes the worktrees nothing would be lost from in the targeted
+// repositories. It always asks first, however few they are : a worktree is a folder on disk,
+// and the list may date from before the last commit, so the count is only what it knows.
+func (m *model) cleanWorktrees() tea.Cmd {
+	targets := m.targets()
+	nb := unusedWorktrees(targets)
+	if nb == 0 {
+		m.status = "No worktree to remove here. The ones holding changes or commits of their own, and the locked ones, are kept."
+		return nil
+	}
+	question := "Remove " + plural(nb, "unused worktree", "unused worktrees")
+	if len(targets) > 1 {
+		question += " in " + plural(len(targets), "repository", "repositories")
+	}
+	m.pending = &pendingAction{
+		question: question + "? [y/N]",
+		run: func() tea.Cmd {
+			return m.startOn(busyClean, targets, func(r *row) tea.Cmd {
+				if len(entity.UnusedWorktrees(r.worktrees)) == 0 {
+					return nil
+				}
+				return cleanWorktreesCmd(r.name, r.gf.Path)
+			})
+		},
+	}
+	m.mode = modeConfirm
+	return nil
 }
 
 // branchChoices are the branches which can be chosen in the details: the ones of the

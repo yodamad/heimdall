@@ -29,6 +29,7 @@ var doneVerbs = map[string]string{
 	busyPull:    "pulled",
 	busySwitch:  "switched",
 	busyCmd:     "ran",
+	busyClean:   "cleaned up",
 }
 
 // logStart records that a repository is being worked on. It is called once the worker slot is
@@ -63,12 +64,19 @@ type discoveredMsg struct {
 }
 
 type statusMsg struct {
-	gf       entity.GitFolder
-	incoming []string
-	outgoing []string
-	recent   []string
-	branches []entity.Branch
-	stashes  int
+	gf        entity.GitFolder
+	incoming  []string
+	outgoing  []string
+	recent    []string
+	branches  []entity.Branch
+	stashes   int
+	worktrees []entity.Worktree
+}
+
+// cleanedMsg says what removing the unused worktrees of a repository did
+type cleanedMsg struct {
+	path    string
+	cleanup gitops.WorktreeCleanup
 }
 
 type opMsg struct {
@@ -102,6 +110,7 @@ func statusCmd(name, path string) tea.Cmd {
 		msg.recent = gitops.RecentCommits(path, nbRecentCommits)
 		msg.branches = gitops.Branches(path)
 		msg.stashes = gitops.Stashes(path)
+		msg.worktrees = gitops.Worktrees(path)
 		if entity.HasRemoteChanges(msg.gf) {
 			msg.incoming = gitops.IncomingCommits(path, msg.gf.CurrentBranch)
 		}
@@ -143,6 +152,23 @@ func switchCmd(name, path string, branch string) tea.Cmd {
 		err := gitops.Switch(path, branch)
 		logEnd(busySwitch, name, err)
 		return opMsg{path: path, kind: busySwitch, err: err}
+	}
+}
+
+// cleanWorktreesCmd removes the worktrees of a repository nothing would be lost from. It
+// reads their state again itself : what the list knows may date from before the last commit.
+func cleanWorktreesCmd(name, path string) tea.Cmd {
+	return func() tea.Msg {
+		workers <- struct{}{}
+		defer func() { <-workers }()
+		logStart(busyClean, name)
+
+		cleanup := gitops.CleanWorktrees(path)
+		for _, removed := range cleanup.Removed {
+			activity.Record(activity.Info, name, "worktree removed : "+removed)
+		}
+		logEnd(busyClean, name, cleanup.Err)
+		return cleanedMsg{path: path, cleanup: cleanup}
 	}
 }
 

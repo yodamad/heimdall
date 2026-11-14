@@ -129,12 +129,18 @@ func Switch(path string, branch string) error {
 	if err == nil {
 		return nil
 	}
-	said := strings.TrimSpace(strings.ReplaceAll(string(out), "\t", "  "))
-	said = strings.TrimPrefix(strings.TrimPrefix(said, "error: "), "fatal: ")
-	if said == "" {
+	return said(string(out), err)
+}
+
+// said turns what git printed into the error, so the user reads git's own words instead of
+// an exit status. When git said nothing, the error it failed with is kept.
+func said(out string, err error) error {
+	text := strings.TrimSpace(strings.ReplaceAll(out, "\t", "  "))
+	text = strings.TrimPrefix(strings.TrimPrefix(text, "error: "), "fatal: ")
+	if text == "" {
 		return err
 	}
-	return errors.New(said)
+	return errors.New(text)
 }
 
 func commits(path string, revisions string) []string {
