@@ -49,7 +49,9 @@ func TestWorktreesDisplayedAndCleaned(t *testing.T) {
 
 	view := m.View()
 	for _, expected := range []string{"Worktrees 3", "spike", "nothing kept here", "wip", "1 changed", "ghost", "folder gone",
-		"3 other worktrees.", "2 unused,", "w remove 2 unused worktrees"} {
+		"3 other worktrees.", "2 unused,", "w remove 2 unused worktrees",
+		// the list has a column of its own counting the worktrees
+		"WT"} {
 		if !strings.Contains(stripAnsi(view), expected) {
 			t.Errorf("view should contain %q :\n%s", expected, view)
 		}
@@ -82,6 +84,10 @@ func TestWorktreesDisplayedAndCleaned(t *testing.T) {
 	}
 	if view = m.View(); !strings.Contains(stripAnsi(view), "Worktrees 1") || strings.Contains(stripAnsi(view), "unused,") {
 		t.Errorf("view should list the worktree left and offer nothing to remove :\n%s", view)
+	}
+	// The column counts the one left, and nothing is marked for removal anymore
+	if got := treesCount(r); got != "1" {
+		t.Errorf("the column should count the worktree left, got %q", got)
 	}
 
 	// Nothing left to remove: w says so instead of asking

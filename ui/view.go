@@ -19,6 +19,7 @@ const nbRowActivity = 8
 
 const (
 	branchW  = 14
+	treesW   = 2
 	stateW   = 28
 	dividerW = 3
 
@@ -49,7 +50,8 @@ Act on the selected repositories, or if none on the current one or folder
   f            fetch
   p            pull, skipped when there are local changes
   w            remove the unused worktrees, the ones holding changes, commits of
-               their own or a lock are kept
+               their own or a lock are kept. The WT column counts the worktrees a
+               repository has besides its own folder, lit when some can be removed
   m            run the morning routine
   !            run a command
 
@@ -379,20 +381,26 @@ func (m *model) listLines() []string {
 // columns gives the width left to the name of a repository under guides, and if there
 // is room for its branch: the name gives way to the guides, so that branches and
 // states stay aligned
-func (m *model) columns(guides string) (int, bool) {
+func (m *model) columns(guides string) (int, bool, bool) {
 	nameW := m.listW - 3 - lipgloss.Width(guides) - 2 - stateW
-	if nameW-branchW-2 >= 16 {
-		return nameW - branchW - 2, true
+	if nameW-branchW-2-treesW-2 >= 16 {
+		return nameW - branchW - 2 - treesW - 2, true, true
 	}
-	return nameW, false
+	if nameW-branchW-2 >= 16 {
+		return nameW - branchW - 2, true, false
+	}
+	return nameW, false, false
 }
 
 // columnsLine names the columns of the list, above the repositories at the root
 func (m *model) columnsLine() string {
-	nameW, withBranch := m.columns("")
+	nameW, withBranch, withTrees := m.columns("")
 	line := "   " + fit("Repository", nameW) + "  "
 	if withBranch {
 		line += fit("Branch", branchW) + "  "
+	}
+	if withTrees {
+		line += fit("WT", treesW) + "  "
 	}
 	// As the titles of the details, they stand out from what they are above
 	return boldStyle.Render(fit(line+"State", m.listW))
@@ -517,6 +525,25 @@ func stateText(r *row) string {
 	return "up to date"
 }
 
+// treesCount says how many worktrees a repository has besides the folder it is known by.
+// A repository with none, and one not read yet, say nothing : the column stays quiet where
+// there is nothing to know.
+func treesCount(r *row) string {
+	if len(r.worktrees) == 0 {
+		return ""
+	}
+	return strconv.Itoa(len(r.worktrees))
+}
+
+// treesStyle keeps the count quiet, unless some of those worktrees can be removed : then it
+// has the color of the state it would be worth looking at, as the w key offers to clean them
+func treesStyle(r *row) lipgloss.Style {
+	if len(entity.UnusedWorktrees(r.worktrees)) > 0 {
+		return lipgloss.NewStyle().Foreground(stateColors[stateAhead])
+	}
+	return dimStyle
+}
+
 func (m *model) rowLine(r *row, depth int, isCursor bool) string {
 	st := stateOf(r)
 	paint := func(style lipgloss.Style, text string) string {
@@ -558,16 +585,21 @@ func (m *model) rowLine(r *row, depth int, isCursor bool) string {
 	}
 
 	guides := m.guides(depth)
-	nameW, withBranch := m.columns(guides)
+	nameW, withBranch, withTrees := m.columns(guides)
 	branch := ""
 	if withBranch {
 		branch = paint(dimStyle, fit(r.gf.CurrentBranch, branchW)+"  ")
+	}
+	trees := ""
+	if withTrees {
+		trees = paint(treesStyle(r), fit(treesCount(r), treesW)+"  ")
 	}
 
 	return paint(dimStyle, " "+guides) +
 		paint(lipgloss.NewStyle().Foreground(selectColor), mark) +
 		paint(nameStyle, " "+fit(r.base, nameW)+"  ") +
 		branch +
+		trees +
 		paint(textStyle, fit(text, stateW))
 }
 
