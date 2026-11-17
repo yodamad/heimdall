@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+#
+# Recording wrapper. It is the real binary, pinned to the demo workspace, so
+# the tape can type plain `heimdall ...` commands and still stay away from the
+# repositories you actually work on.
+set -euo pipefail
+
+ROOT="${HEIMDALL_DEMO_ROOT:-/tmp/heimdall-demo}"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+BIN="${HEIMDALL_BIN:-$HERE/heimdall}"
+
+if [ ! -x "$BIN" ]; then
+  echo "No heimdall binary at $BIN — run: go build -o heimdall ." >&2
+  exit 1
+fi
+
+exec "$BIN" --config-file="$ROOT/heimdall.yml" --log-dir="$ROOT/logs/" "$@"
