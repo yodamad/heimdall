@@ -40,6 +40,10 @@ const helpText = `Move
   → l          expand the folder, or go into it
   z            collapse / expand all the folders
 
+Where to look, for this session only : the header says where, and how deep
+  d            look in another folder, d enter goes into the one under the cursor
+  +/-          look one level deeper / less deep
+
 Select
   space        select / unselect the repository, or all the ones of the folder
   a            select / unselect all the listed repositories
@@ -147,11 +151,13 @@ func (m *model) headerLine() string {
 	}
 	const badgeW = 12 // " Heimdall " and its margins
 
-	// On the right, what is running or else where heimdall is looking
-	right := strings.TrimSuffix(m.root, "/")
-	if home, err := os.UserHomeDir(); err == nil && strings.HasPrefix(right, home) {
-		right = "~" + strings.TrimPrefix(right, home)
-	}
+	// On the right, what is running or else where heimdall is looking, and how deep : both can
+	// be changed from the list, so both have to be shown
+	lookingIn := shortPath(strings.TrimSuffix(m.root, "/"))
+	depth := "depth " + strconv.Itoa(m.depth)
+	right := lookingIn + " · " + depth
+	// Where it looks can be cut down to fit, what runs cannot
+	shrinkable := true
 	// What runs now is the most useful thing on this line: it gets a badge of its own
 	rightStyle := dimStyle
 	// The panel owns the progress of the run while it is up : reading the same count twice on one
@@ -159,6 +165,7 @@ func (m *model) headerLine() string {
 	// short terminal and on the screens taking the whole pane.
 	if running := m.running(); running > 0 && m.batchTotal > 0 && !m.runPanelOn() {
 		right = " ⟳ " + busyVerbs[m.batchKind] + " " + strconv.Itoa(m.batchTotal-running) + " of " + strconv.Itoa(m.batchTotal) + " "
+		shrinkable = false
 		rightStyle = activityStyle
 		if commons.NoColor {
 			rightStyle = lipgloss.NewStyle().Bold(true).Reverse(true)
@@ -189,8 +196,19 @@ func (m *model) headerLine() string {
 		}
 		return w
 	}
-	if width()+lipgloss.Width(right)+1 > m.width {
-		right = ""
+	// The path gives way before the counts do : it is cut from the left, keeping the folders
+	// closest to where it looks, and the depth stays as it is short and now worth reading
+	if room := m.width - width() - 1; lipgloss.Width(right) > room {
+		switch {
+		case !shrinkable:
+			right = ""
+		case lipgloss.Width(depth) >= room:
+			right = ""
+		default:
+			// fitLeft pads to its width, which would push the line past the right edge
+			cut := strings.TrimRight(fitLeft(lookingIn, room-lipgloss.Width(depth)-3), " ")
+			right = strings.TrimPrefix(cut+" · "+depth, " · ")
+		}
 	}
 	for len(counts) > 1 && width() > m.width {
 		counts = counts[:len(counts)-1]
@@ -247,6 +265,8 @@ func (m *model) statusLine() string {
 	switch m.mode {
 	case modeFilter:
 		return " " + m.filter.View()
+	case modeDir:
+		return " " + m.dirInput.View()
 	case modeCommand:
 		return " " + m.cmdInput.View()
 	case modeConfirm:
@@ -275,6 +295,18 @@ func (m *model) keysLine() string {
 	switch {
 	case m.mode == modeFilter:
 		keys = []string{"enter keep filter", "esc list all"}
+	case m.mode == modeDir:
+		keys = []string{"enter look there", "esc cancel"}
+		if m.dirNote != "" {
+			// What is wrong with the folder matters more than the two keys : it is lit, and
+			// takes the whole line when there is no room for both
+			note := warnStyle.Render(" " + m.dirNote)
+			rest := m.width - len([]rune(m.dirNote)) - 1
+			if tail := "   " + strings.Join(keys, "   "); rest > len([]rune(tail)) {
+				return note + dimStyle.Render(fit(tail, rest))
+			}
+			return warnStyle.Render(fit(" "+m.dirNote, m.width))
+		}
 	case m.mode == modeCommand:
 		keys = []string{"enter run", "esc cancel"}
 	case m.mode == modeConfirm:
@@ -349,7 +381,7 @@ func (m *model) listLines() []string {
 	if len(m.rows) == 0 {
 		return []string{
 			fit(" No git folder in "+m.root, m.listW),
-			dimStyle.Render(fit(" Start heimdall with -w to look in another directory, or -d to look deeper.", m.listW)),
+			dimStyle.Render(fit(" Press d to look in another folder, or + to look one level deeper.", m.listW)),
 		}
 	}
 	if len(m.visible) == 0 {

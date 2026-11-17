@@ -55,6 +55,20 @@ The other commands (`git-info`, `git-clone`, `good-morning`, `env-info`) are sti
 | ++question++ | Help |
 | ++q++ | Quit |
 
+## Where to look
+
+Heimdall starts looking where it was told to: the [`work_dir`](config.md) of the configuration file, or the `-w` flag, down to the number of levels of [`-d`](#search-depth-depth-or-d). Both can be changed without leaving the TUI, and the header says where it is looking and how deep.
+
+| Key | Action |
+|---|---|
+| ++d++ | Look in another folder. The prompt starts from the folder under the cursor, so going into one of the listed folders is ++d++ ++enter++. A folder which does not exist is refused, and the prompt stays up so the path can be fixed |
+| ++plus++ / ++minus++ | Look one level deeper / less deep, between 1 and 10 |
+
+Looking elsewhere drops the whole list and builds it again, so it is refused while an action is still running: wait for it, or press ++q++ and start again.
+
+!!!info "For the session only"
+    Neither key writes anything: the configuration file is left alone, and the next start reads `work_dir` and `-d` again. Set `work_dir` in the [configuration file](config.md) to always start somewhere else.
+
 ## Selection
 
 Actions are run on the selected repositories or, if none is selected, on the current one. With the cursor on a folder, they are run on all its repositories, the ones of the folders it holds included.
@@ -171,6 +185,8 @@ By default, it searches no more than 3 levels of subdirectories, you can overrid
 ```bash
 heimdall tui -d 5
 ```
+
+Once the TUI is up, ++plus++ and ++minus++ change the depth without restarting, see [Where to look](#where-to-look).
 
 ### Global flags
 

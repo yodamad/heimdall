@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -28,6 +29,7 @@ type mode int
 const (
 	modeList mode = iota
 	modeFilter
+	modeDir
 	modeCommand
 	modeConfirm
 	modeHelp
@@ -88,9 +90,17 @@ type pendingAction struct {
 	run      func() tea.Cmd
 }
 
+// minDepth and maxDepth bound the search depth the + and - keys can set. The upper bound keeps
+// an absent-minded press from walking a whole home directory level by level.
+const minDepth, maxDepth = 1, 10
+
 type model struct {
 	root  string
 	depth int
+	// scanSeq numbers the scans, so that the answer of a replaced one can be dropped
+	scanSeq uint64
+	// dirNote says why the folder typed in the dir prompt was refused
+	dirNote string
 
 	rows      []*row
 	byPath    map[string]*row
@@ -144,6 +154,7 @@ type model struct {
 	log *activity.Log
 
 	filter    textinput.Model
+	dirInput  textinput.Model
 	cmdInput  textinput.Model
 	credInput textinput.Model
 	detail    viewport.Model
@@ -167,6 +178,11 @@ func Run(root string, depth int) error {
 func newModel(root string, depth int) *model {
 	filter := textinput.New()
 	filter.Prompt = "/ "
+	dirInput := textinput.New()
+	dirInput.Prompt = "dir > "
+	dirInput.Placeholder = "folder to look in"
+	// A path can be long, and the default limit would truncate it without saying so
+	dirInput.CharLimit = 1024
 	cmdInput := textinput.New()
 	cmdInput.Prompt = "! "
 	cmdInput.Placeholder = "command to run"
@@ -193,6 +209,7 @@ func newModel(root string, depth int) *model {
 		collapsed:   map[string]bool{},
 		discovering: true,
 		filter:      filter,
+		dirInput:    dirInput,
 		cmdInput:    cmdInput,
 		credInput:   credInput,
 		credPicked:  map[string]bool{},
@@ -205,7 +222,7 @@ func newModel(root string, depth int) *model {
 }
 
 func (m *model) Init() tea.Cmd {
-	return tea.Batch(m.spin.Tick, discoverCmd(m.root, m.depth), activityTickCmd())
+	return tea.Batch(m.spin.Tick, discoverCmd(m.root, m.depth, m.scanSeq), activityTickCmd())
 }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -224,6 +241,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.layout()
 
 	case discoveredMsg:
+		// The answer of a scan which has been replaced by another says nothing about where
+		// Heimdall is looking now
+		if msg.seq != m.scanSeq {
+			break
+		}
 		m.discovering = false
 		var cmds []tea.Cmd
 		for _, path := range msg.paths {
@@ -380,6 +402,21 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 		}
 		return nil
 
+	case modeDir:
+		switch key.String() {
+		case "enter":
+			return m.setDir()
+		case "esc":
+			m.closeDirPrompt()
+		default:
+			var cmd tea.Cmd
+			m.dirInput, cmd = m.dirInput.Update(key)
+			// What is being typed is not refused yet
+			m.dirNote = ""
+			return cmd
+		}
+		return nil
+
 	case modeCommand:
 		switch key.String() {
 		case "enter":
@@ -521,6 +558,13 @@ func (m *model) handleKey(key tea.KeyMsg) tea.Cmd {
 	case "/":
 		m.mode = modeFilter
 		m.filter.Focus()
+	case "d":
+		return m.openDirPrompt()
+	case "+", "=":
+		// = is the unshifted + on most layouts
+		return m.setDepth(m.depth + 1)
+	case "-":
+		return m.setDepth(m.depth - 1)
 	case "esc":
 		if m.filter.Value() != "" {
 			m.filter.SetValue("")
@@ -683,6 +727,117 @@ func (m *model) switchBranch() tea.Cmd {
 // start launches an action on each target which is not already busy
 func (m *model) start(kind string, action func(r *row) tea.Cmd) tea.Cmd {
 	return m.startOn(kind, m.targets(), action)
+}
+
+// rescan looks again, under root and down to depth levels. Everything found before is dropped :
+// the name of a repository and the key of a folder are both relative to the root.
+func (m *model) rescan(root string, depth int) tea.Cmd {
+	// A scan while an action runs would leave the progress of the run counting repositories
+	// which are no longer listed
+	if m.running() > 0 {
+		m.status = "Wait for the running actions to be over"
+		return nil
+	}
+
+	m.root, m.depth = root, depth
+	m.scanSeq++
+
+	m.rows = nil
+	m.byPath = map[string]*row{}
+	m.visible = nil
+	m.lines = nil
+	m.folders = nil
+	m.collapsed = map[string]bool{}
+	m.cursor, m.offset = 0, 0
+	m.discovering, m.sorted = true, false
+	m.detailFocus, m.detailPath = false, ""
+	m.batchKind, m.batchTotal, m.batchFailed = "", 0, 0
+	m.credOffer = ""
+
+	activity.Record(activity.Info, "", "looking under "+root+", depth "+strconv.Itoa(depth))
+	return discoverCmd(root, depth, m.scanSeq)
+}
+
+// expandPath makes a typed path absolute, with ~ standing for the home directory
+func expandPath(p string) (string, error) {
+	p = strings.TrimSpace(p)
+	if p == "~" || strings.HasPrefix(p, "~"+sep) {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		p = filepath.Join(home, strings.TrimPrefix(p, "~"))
+	}
+	abs, err := filepath.Abs(p)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Clean(abs), nil
+}
+
+// shortPath is a path with the home directory written ~, as the header writes it
+func shortPath(p string) string {
+	p = strings.TrimSuffix(p, sep)
+	if home, err := os.UserHomeDir(); err == nil && home != "" && strings.HasPrefix(p, home) {
+		return "~" + strings.TrimPrefix(p, home)
+	}
+	return p
+}
+
+// openDirPrompt asks where to look, starting from the folder under the cursor when there is one
+func (m *model) openDirPrompt() tea.Cmd {
+	start := m.root
+	if folder := m.currentFolder(); folder != "" {
+		start = filepath.Join(m.root, folder)
+	}
+	m.dirNote = ""
+	m.dirInput.SetValue(shortPath(start))
+	m.dirInput.CursorEnd()
+	m.dirInput.Focus()
+	m.mode = modeDir
+	return textinput.Blink
+}
+
+// setDir reads what was typed in the dir prompt. A folder which cannot be looked in keeps the
+// prompt up, with a note, so that a typo can be fixed without typing the whole path again.
+func (m *model) setDir() tea.Cmd {
+	typed := strings.TrimSpace(m.dirInput.Value())
+	if typed == "" {
+		m.closeDirPrompt()
+		return nil
+	}
+	path, err := expandPath(typed)
+	if err != nil {
+		m.dirNote = "Cannot read " + typed + " : " + err.Error()
+		return nil
+	}
+	info, err := os.Stat(path)
+	switch {
+	case err != nil:
+		m.dirNote = "No such folder : " + typed
+		return nil
+	case !info.IsDir():
+		m.dirNote = "Not a folder : " + typed
+		return nil
+	}
+	m.closeDirPrompt()
+	return m.rescan(path, m.depth)
+}
+
+func (m *model) closeDirPrompt() {
+	m.dirInput.SetValue("")
+	m.dirInput.Blur()
+	m.dirNote = ""
+	m.mode = modeList
+}
+
+// setDepth looks again one level deeper or less deep, within the bounds
+func (m *model) setDepth(depth int) tea.Cmd {
+	if depth < minDepth || depth > maxDepth {
+		m.status = "Depth is already " + strconv.Itoa(m.depth)
+		return nil
+	}
+	return m.rescan(m.root, depth)
 }
 
 // rowsForHosts are the repositories whose origin is on one of these platforms, which is what has to
@@ -1008,6 +1163,7 @@ func (m *model) layout() {
 	m.logView.Height = m.paneH - 1
 	m.syncLogView()
 	m.filter.Width = m.width - 10
+	m.dirInput.Width = m.width - 10
 	m.cmdInput.Width = m.width - 10
 	m.credInput.Width = m.width - 20
 	m.detailPath = ""

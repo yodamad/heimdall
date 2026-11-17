@@ -61,6 +61,9 @@ func logEnd(kind, name string, err error) {
 
 type discoveredMsg struct {
 	paths []string
+	// seq is the scan this answer belongs to : the one of a scan which has been replaced by
+	// another is dropped, so that two scans in a row do not list their repositories twice
+	seq uint64
 }
 
 type statusMsg struct {
@@ -90,9 +93,9 @@ type cmdMsg struct {
 	results []entity.CmdInfo
 }
 
-func discoverCmd(root string, depth int) tea.Cmd {
+func discoverCmd(root string, depth int, seq uint64) tea.Cmd {
 	return func() tea.Msg {
-		return discoveredMsg{paths: gitops.Discover(root, depth)}
+		return discoveredMsg{paths: gitops.Discover(root, depth), seq: seq}
 	}
 }
 
